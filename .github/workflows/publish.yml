@@ -53,7 +53,10 @@ jobs:
           scope: '@adimm'
           always-auth: 'true'
       - name: Install dependencies
-        run: npm ci
+        # TO-DO: Find out why `npm ci` fails with: Cannot find module @rollup/rollup-linux-x64-gnu. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
       - name: Build package
         run: npm run build
       - name: Publish to npmjs
