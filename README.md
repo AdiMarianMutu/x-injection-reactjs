@@ -88,9 +88,16 @@ export const RandomNumberComponentModule = new ComponentProviderModule({
 });
 
 export function RandomNumberComponent(props: RandomNumberComponentProps) {
-  const service = useInject(RandomNumberService);
+  return (
+    <ModuleProvider
+      module={RandomNumberComponentModule}
+      render={() => {
+        const service = useInject(RandomNumberService);
 
-  return <h1>A random number: {service.generate()}</h1>;
+        return <h1>A random number: {service.generate()}</h1>;
+      }}
+    />
+  );
 }
 ```
 
