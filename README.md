@@ -113,13 +113,18 @@ export const RandomNumberComponentModule = new ComponentProviderModule({
 });
 
 export function RandomNumberComponent(props: RandomNumberComponentProps) {
-  // This hook is necessary in order to expose the component instance
-  // context up to the parent component
-  useExposeComponentModuleContext();
+  <ModuleProvider
+    module={RandomNumberComponentModule}
+    render={() => {
+      // This hook is necessary in order to expose the component instance
+      // context up to the parent component
+      useExposeComponentModuleContext();
 
-  const service = useInject(RandomNumberService);
+      const service = useInject(RandomNumberService);
 
-  return <h1>A random number: {service.generate()}</h1>;
+      return <h1>A random number: {service.generate()}</h1>;
+    }}
+  />;
 }
 
 ////////////////////////////////////////
@@ -139,39 +144,46 @@ export const ParentServiceComponentModule = new ComponentProviderModule({
 });
 
 export function ParentComponent(props: ParentComponentProps) {
-  const service = useInject(ParentService);
-
   return (
-    <>
-      <TapIntoComponent
-        // By using the fluid syntax
-        contextInstance={() => ({
-          // If one of the children did expose the `RandomNumberComponentModule`
-          // module, we'll be able to access its instance.
-          tryGet: RandomNumberComponentModule,
-          thenDo: (ctx) => {
-            const randomNumberService_FromComponentInstance = ctx.get(RandomNumberComponentModule);
+    <ModuleProvider
+      module={ParentServiceComponentModule}
+      render={() => {
+        const service = useInject(ParentService);
 
-            service.injectRandomNumberService(randomNumberService_FromComponentInstance);
-          },
-        })}>
-        <RandomNumberComponent />
-      </TapIntoComponent>
+        return (
+          <>
+            <TapIntoComponent
+              // By using the fluid syntax
+              contextInstance={() => ({
+                // If one of the children did expose the `RandomNumberComponentModule`
+                // module, we'll be able to access its instance.
+                tryGet: RandomNumberComponentModule,
+                thenDo: (ctx) => {
+                  const randomNumberService_FromComponentInstance = ctx.get(RandomNumberComponentModule);
 
-      <TapIntoComponent
-        // By accessing the entire underlying context map which may contain even more
-        // modules exposed by more children down the tree.
-        contextInstance={(ctxMap) => {
-          const ctx = ctxMap.get(RandomNumberComponentModule.toString());
-          if (!ctx) return;
+                  service.injectRandomNumberService(randomNumberService_FromComponentInstance);
+                },
+              })}>
+              <RandomNumberComponent />
+            </TapIntoComponent>
 
-          const randomNumberService_FromComponentInstance = ctx.get(RandomNumberComponentModule);
+            <TapIntoComponent
+              // By accessing the entire underlying context map which may contain even more
+              // modules exposed by more children down the tree.
+              contextInstance={(ctxMap) => {
+                const ctx = ctxMap.get(RandomNumberComponentModule.toString());
+                if (!ctx) return;
 
-          service.injectRandomNumberService(randomNumberService_FromComponentInstance);
-        }}>
-        <RandomNumberComponent />
-      </TapIntoComponent>
-    </>
+                const randomNumberService_FromComponentInstance = ctx.get(RandomNumberComponentModule);
+
+                service.injectRandomNumberService(randomNumberService_FromComponentInstance);
+              }}>
+              <RandomNumberComponent />
+            </TapIntoComponent>
+          </>
+        );
+      }}
+    />
   );
 }
 ```
@@ -183,31 +195,56 @@ or introduce unknown bugs, please use it carefully and with diligence!
 
 ```tsx
 export function ParentComponent(props: ParentComponentProps) {
-  // By using this hook, the component will always re-render whenever
-  // a child using a ProviderModule which is also imported into the parent ProviderModule,
-  // has mounted and rendered!
-  useRerenderOnChildrenModuleContextLoaded();
+  return (
+    <ModuleProvder
+      module={ParentServiceComponentModule}
+      render={() => {
+        // By using this hook, the component will always re-render whenever
+        // a child using a ProviderModule which is also imported into the parent ProviderModule,
+        // has mounted and rendered!
+        useRerenderOnChildrenModuleContextLoaded();
 
-  // We should use the `useInjectOnRender` instead of the default `useInject`
-  // hook which re-uses the same instance of the injected dependency
-  // between re-renders.
-  //
-  // Note: It may still work with the `useInject` hook too, but it may not be predictable.
-  const service = useInjectOnRender(ParentService);
+        // We should use the `useInjectOnRender` instead of the default `useInject`
+        // hook which re-uses the same instance of the injected dependency
+        // between re-renders.
+        //
+        // Note: It may still work with the `useInject` hook too, but it may not be predictable.
+        const service = useInjectOnRender(ParentService);
 
-  // At this point the `service.randomNumberService` instance should be the one
-  // from the `RandomNumberComponent` below.
-  //
-  // Note: Expect during the 1st render cycle to not be the same instance as the one used by the child component!
-  // The `xInjection` container will still supply the correct provider to the
-  // constructor parameter, but it'll be a new transient instance.
-  console.log(service.randomNumberService.generate());
+        // At this point the `service.randomNumberService` instance should be the one
+        // from the `RandomNumberComponent` below.
+        //
+        // Note: Expect during the 1st render cycle to not be the same instance as the one used by the child component!
+        // The `xInjection` container will still supply the correct provider to the
+        // constructor parameter, but it'll be a new transient instance.
+        console.log(service.randomNumberService.generate());
 
-  // As we are now using the `useRerenderOnChildrenModuleContextLoaded` hook
-  // there's no need anymore for the `TapIntoComponent` wrapper.
-  return <RandomNumberComponent />;
+        // As we are now using the `useRerenderOnChildrenModuleContextLoaded` hook
+        // there's no need anymore for the `TapIntoComponent` wrapper.
+        return <RandomNumberComponent />;
+      }}
+    />
+  );
 }
 ```
+
+The `ModuleProvider` component also accepts the `children` prop, this means you can also use it like this:
+
+```tsx
+export function Component() {
+  return <h1>Hello World!</h1>;
+}
+
+function MyApp() {
+  return (
+    <ModuleProvider module={ComponentModule}>
+      <Component />
+    </ModuleProvider>
+  );
+}
+```
+
+> **Note:** You don't have to wrap your entire application with a `ModuleProvider` which provides the `AppModule`, the global container is already available to use and all your `ComponentProviderModule` know ouf-of-the-box how to access it when you provide them with providers registered into the `AppModule`.
 
 ## Documentation
 
