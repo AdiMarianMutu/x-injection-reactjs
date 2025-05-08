@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 
 import {
   ComponentProviderModule,
+  ModuleProvider,
   TapIntoComponent,
   useExposeComponentModuleContext,
   useInject,
@@ -15,7 +16,6 @@ import {
   type IComponentProviderModule,
   type IComponentProviderModuleNaked,
 } from '../src';
-import { _ComponentWithProviderModule } from './helpers';
 import {
   AppModule,
   CatService,
@@ -52,12 +52,7 @@ describe.each([
 
     it('should correctly render the component', async () => {
       await act(async () =>
-        render(
-          <_ComponentWithProviderModule
-            moduleProps={{ module: AppModule as any }}
-            cb={() => <WithTestId></WithTestId>}
-          />
-        )
+        render(<ModuleProvider module={AppModule as any} render={() => <WithTestId></WithTestId>} />)
       );
 
       await waitFor(async () => {
@@ -70,9 +65,9 @@ describe.each([
 
       await act(async () =>
         render(
-          <_ComponentWithProviderModule
-            moduleProps={{ module: AppModule as any }}
-            cb={() => {
+          <ModuleProvider
+            module={AppModule as any}
+            render={() => {
               const ripService = useInject(RipService);
 
               return <span data-testid={testId}>{ripService.name}</span>;
@@ -101,9 +96,10 @@ describe.each([
                 componentModuleInstance = ctx;
               },
             })}>
-            <_ComponentWithProviderModule
-              moduleProps={{ module: m, disposeModuleOnUnmount: true }}
-              cb={() => {
+            <ModuleProvider
+              module={m}
+              disposeModuleOnUnmount={true}
+              render={() => {
                 useExposeComponentModuleContext();
 
                 return <></>;
@@ -140,9 +136,11 @@ describe.each([
               componentModuleInstance = ctx.toNaked();
             },
           })}>
-          <_ComponentWithProviderModule
-            moduleProps={{ module: m, disposeModuleOnUnmount: true, tryReInitModuleOnMount: mo }}
-            cb={() => {
+          <ModuleProvider
+            module={m}
+            disposeModuleOnUnmount={true}
+            tryReInitModuleOnMount={mo}
+            render={() => {
               useExposeComponentModuleContext();
 
               return <></>;
@@ -171,9 +169,9 @@ describe.each([
     it('should inject multiple dependencies at once when using `useInjectMany`', async () => {
       await act(async () =>
         render(
-          <_ComponentWithProviderModule
-            moduleProps={{ module: PropertiesModule }}
-            cb={() => {
+          <ModuleProvider
+            module={PropertiesModule}
+            render={() => {
               const [catService, userService] = useInjectMany({ deps: [CatService, UserService] });
 
               return (
@@ -199,9 +197,9 @@ describe.each([
         const valuesGenerated: number[] = [];
 
         const T = () => (
-          <_ComponentWithProviderModule
-            moduleProps={{ module: RandomModule }}
-            cb={() => {
+          <ModuleProvider
+            module={RandomModule}
+            render={() => {
               const randomService = useInject(RandomService);
 
               valuesGenerated.push(randomService.random);
@@ -222,17 +220,18 @@ describe.each([
       it('should not mutate the dependency during re-renders when using `useInject`', async () => {
         const valuesGenerated: number[] = [];
 
+        const A = () => {
+          const randomService = useInject(RandomService);
+
+          valuesGenerated.push(randomService.random);
+
+          return <></>;
+        };
+
         const T = () => (
-          <_ComponentWithProviderModule
-            moduleProps={{ module: RandomModule }}
-            cb={() => {
-              const randomService = useInject(RandomService);
-
-              valuesGenerated.push(randomService.random);
-
-              return <></>;
-            }}
-          />
+          <ModuleProvider module={RandomModule}>
+            <A />
+          </ModuleProvider>
         );
 
         const { rerender } = await act(async () => render(<T />));
@@ -247,18 +246,20 @@ describe.each([
       it('should re-inject dependency on each re-render when using `useInjectOnRender`', async () => {
         const valuesGenerated: number[] = [];
 
-        const T = () => (
-          <_ComponentWithProviderModule
-            moduleProps={{ module: RandomModule }}
-            cb={() => {
-              const randomService = useInjectOnRender(RandomService);
+        function T() {
+          return (
+            <ModuleProvider
+              module={RandomModule}
+              render={() => {
+                const randomService = useInjectOnRender(RandomService);
 
-              valuesGenerated.push(randomService.random);
+                valuesGenerated.push(randomService.random);
 
-              return <></>;
-            }}
-          />
-        );
+                return <></>;
+              }}
+            />
+          );
+        }
 
         const { rerender } = await act(async () => render(<T />));
 
@@ -296,9 +297,9 @@ describe.each([
                   );
                 },
               })}>
-              <_ComponentWithProviderModule
-                moduleProps={{ module: m }}
-                cb={() => {
+              <ModuleProvider
+                module={m}
+                render={() => {
                   useExposeComponentModuleContext();
 
                   useInjectMany({ deps: [CatService, UserService] });
@@ -368,9 +369,9 @@ describe.each([
 
       const CalculatorApp = () => {
         return (
-          <_ComponentWithProviderModule
-            moduleProps={{ module: CalculatorAppModule }}
-            cb={() => {
+          <ModuleProvider
+            module={CalculatorAppModule}
+            render={() => {
               useExposeComponentModuleContext();
 
               const [sumValue, setSumValue] = useState(0);
@@ -483,36 +484,32 @@ describe.each([
 
       const INPUT_BOX_TEXT = 'Hello World!';
 
-      const InputBox = () => {
-        return (
-          <_ComponentWithProviderModule
-            moduleProps={{ module: InputBoxModule }}
-            cb={() => {
-              useExposeComponentModuleContext();
+      const InputBox = () => (
+        <ModuleProvider
+          module={InputBoxModule}
+          render={() => {
+            useExposeComponentModuleContext();
 
-              const [text, setText] = useState('');
+            const [text, setText] = useState('');
 
-              const service = useInject(InputBoxService);
+            const service = useInject(InputBoxService);
 
-              service.renderText = setText;
+            service.renderText = setText;
 
-              useEffect(() => {
-                service.updateText(INPUT_BOX_TEXT);
-              }, []);
+            useEffect(() => {
+              service.updateText(INPUT_BOX_TEXT);
+            }, []);
 
-              return (
-                <input data-testid="input-box" value={text} onChange={(e) => service.updateText(e.target.value)} />
-              );
-            }}
-          />
-        );
-      };
+            return <input data-testid="input-box" value={text} onChange={(e) => service.updateText(e.target.value)} />;
+          }}
+        />
+      );
 
       const AutocompleteDropdown = () => {
         return (
-          <_ComponentWithProviderModule
-            moduleProps={{ module: AutocompleteDropdownModule }}
-            cb={() => {
+          <ModuleProvider
+            module={AutocompleteDropdownModule}
+            render={() => {
               useRerenderOnChildrenModuleContextLoaded();
 
               const service = useInjectOnRender(AutocompleteDropdownService);

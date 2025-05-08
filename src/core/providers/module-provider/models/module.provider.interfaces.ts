@@ -3,7 +3,9 @@ import type { ProviderModuleOptions } from '@adimm/x-injection';
 import type { IComponentProviderModule } from '../../../../types';
 
 export interface ModuleProviderProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
+
+  render?: () => React.ReactNode;
 
   /** The {@link IComponentProviderModule | ComponentProviderModule} instance which must be accessible by this component. */
   module: IComponentProviderModule;

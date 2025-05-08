@@ -1,4 +1,4 @@
-import { useContext, useMemo } from 'react';
+import { useCallback, useContext } from 'react';
 import type { Except } from 'type-fest';
 
 import { useEffectOnce } from '../../../helpers';
@@ -12,23 +12,23 @@ import {
 
 export function ModuleProvider({
   children,
+  render,
   module,
   tryReInitModuleOnMount,
   disposeModuleOnUnmount,
 }: ModuleProviderProps) {
   const isAppModule = module.toNaked().isAppModule;
+  const Renderer = useCallback(() => render?.(), []);
 
   const moduleCtxReference = {
-    ctx: useMemo(() => {
-      return isAppModule ? module : module.toNaked()._convertToContextualizedComponentInstance();
-    }, [children, module, tryReInitModuleOnMount, disposeModuleOnUnmount]),
+    ctx: isAppModule ? module : module.toNaked()._convertToContextualizedComponentInstance(),
   };
 
   return (
     <REACT_X_INJECTION_CONTEXT.Provider value={moduleCtxReference}>
       <REACT_X_INJECTION_EXPOSED_COMPONENT_RERENDER_ON_CTX_CHANGE.Provider value={{ r: 0 }}>
         <XInjectionChildrenRenderer
-          children={children}
+          children={children ?? <Renderer />}
           module={moduleCtxReference}
           tryReInitModuleOnMount={tryReInitModuleOnMount}
           disposeModuleOnUnmount={disposeModuleOnUnmount}
