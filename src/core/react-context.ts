@@ -1,7 +1,7 @@
 import { AppModule } from '@adimm/x-injection';
 import { createContext } from 'react';
 
-import type { IComponentProviderModule } from '../../../types';
+import type { IComponentProviderModule } from '../types';
 
 /**
  * The `React.Context` value to be provided to a `React.Provider`.

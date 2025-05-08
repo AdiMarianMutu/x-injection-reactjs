@@ -1,7 +1,7 @@
 import { useContext, useEffect, useMemo } from 'react';
 import type { Except } from 'type-fest';
 
-import { REACT_X_INJECTION_EXPOSED_COMPONENT_MODULE_CONTEXT } from '../../providers';
+import { REACT_X_INJECTION_EXPOSED_COMPONENT_MODULE_CONTEXT } from '../../react-context';
 import type { TapIntoComponentContextProps } from './interfaces';
 
 /**

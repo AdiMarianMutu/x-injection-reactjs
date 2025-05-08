@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 
-import { REACT_X_INJECTION_EXPOSED_COMPONENT_RERENDER_ON_CTX_CHANGE } from '../providers';
+import { REACT_X_INJECTION_EXPOSED_COMPONENT_RERENDER_ON_CTX_CHANGE } from '../react-context';
 
 /**
  * This is an **experimental** hook which can be used to make sure that a component will re-render when a children

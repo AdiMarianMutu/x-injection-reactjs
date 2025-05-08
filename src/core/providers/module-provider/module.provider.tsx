@@ -3,12 +3,12 @@ import type { Except } from 'type-fest';
 
 import { useEffectOnce } from '../../../helpers';
 import type { IComponentProviderModule, IComponentProviderModuleNaked } from '../../../types';
-import type { ModuleProviderProps } from './models';
 import {
   REACT_X_INJECTION_CONTEXT,
   REACT_X_INJECTION_EXPOSED_COMPONENT_MODULE_CONTEXT,
   REACT_X_INJECTION_EXPOSED_COMPONENT_RERENDER_ON_CTX_CHANGE,
-} from './react-context';
+} from '../../react-context';
+import type { ModuleProviderProps } from './models';
 
 export function ModuleProvider({
   children,

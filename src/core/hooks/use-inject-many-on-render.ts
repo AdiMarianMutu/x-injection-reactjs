@@ -7,7 +7,7 @@ import type {
 import { useContext } from 'react';
 
 import type { UseInjectSharedOptions } from '../../types';
-import { REACT_X_INJECTION_CONTEXT } from '../providers';
+import { REACT_X_INJECTION_CONTEXT } from '../react-context';
 
 /**
  * Can be used to retrieve many resolved `dependencies` from the module container at once.

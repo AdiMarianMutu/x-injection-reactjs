@@ -2,7 +2,7 @@ import type { ProviderToken } from '@adimm/x-injection';
 import { useContext } from 'react';
 
 import type { UseInjectSharedOptions } from '../../types';
-import { REACT_X_INJECTION_CONTEXT } from '../providers';
+import { REACT_X_INJECTION_CONTEXT } from '../react-context';
 
 /**
  * React `hook` which can be used inside a component to inject the required {@link provider | dependency}.
