@@ -25,7 +25,6 @@ export function useRerenderOnChildrenModuleContextLoaded(): void {
 
   useEffect(() => {
     const parentModuleNaked = parentModule.ctx.toNaked();
-
     const contextualizedImportedModules = parentModuleNaked.imports.map((importedModule) => {
       const importedModuleId = importedModule.toString();
 
@@ -39,13 +38,15 @@ export function useRerenderOnChildrenModuleContextLoaded(): void {
       return ctxMap.get(importedModuleId) as IComponentProviderModuleNaked;
     });
 
-    if (contextualizedImportedModules.length > 0) {
-      parentModuleNaked._lazyInit({
-        ...parentModuleNaked._initialOptions,
-        imports: contextualizedImportedModules,
-      });
-
-      rerenderComponent();
+    if (contextualizedImportedModules.length === 0) {
+      return;
     }
+
+    parentModuleNaked._lazyInit({
+      ...parentModuleNaked._initialOptions,
+      imports: contextualizedImportedModules,
+    });
+
+    rerenderComponent();
   }, [parentModule, ctxMap]);
 }
