@@ -47,5 +47,5 @@ export function useRerenderOnChildrenModuleContextLoaded(): void {
 
       rerenderComponent();
     }
-  }, []);
+  }, [parentModule, ctxMap]);
 }
