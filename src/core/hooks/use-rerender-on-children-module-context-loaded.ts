@@ -1,6 +1,8 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect } from 'react';
 
-import { REACT_X_INJECTION_EXPOSED_COMPONENT_RERENDER_ON_CTX_CHANGE } from '../react-context';
+import { useRerender } from '../../helpers';
+import type { IComponentProviderModuleNaked } from '../../types';
+import { REACT_X_INJECTION_CONTEXT, REACT_X_INJECTION_EXPOSED_COMPONENT_MODULE_CONTEXT } from '../react-context';
 
 /**
  * This is an **experimental** hook which can be used to make sure that a component will re-render when a children
@@ -16,10 +18,34 @@ import { REACT_X_INJECTION_EXPOSED_COMPONENT_RERENDER_ON_CTX_CHANGE } from '../r
  * @experimental
  */
 export function useRerenderOnChildrenModuleContextLoaded(): void {
-  const rerenderParentCtx = useContext(REACT_X_INJECTION_EXPOSED_COMPONENT_RERENDER_ON_CTX_CHANGE);
-  const [, setRerender] = useState(0);
+  const parentModule = useContext(REACT_X_INJECTION_CONTEXT);
+  const ctxMap = useContext(REACT_X_INJECTION_EXPOSED_COMPONENT_MODULE_CONTEXT);
+
+  const rerenderComponent = useRerender();
 
   useEffect(() => {
-    setRerender((x) => x + 1);
-  }, [rerenderParentCtx.r]);
+    const parentModuleNaked = parentModule.ctx.toNaked();
+
+    const contextualizedImportedModules = parentModuleNaked.imports.map((importedModule) => {
+      const importedModuleId = importedModule.toString();
+
+      const shouldReplaceImportedModuleWithContextualized =
+        ctxMap.get(importedModuleId)?.toString() === importedModuleId;
+
+      /* istanbul ignore next */
+      if (!shouldReplaceImportedModuleWithContextualized)
+        return importedModule as unknown as IComponentProviderModuleNaked;
+
+      return ctxMap.get(importedModuleId) as IComponentProviderModuleNaked;
+    });
+
+    if (contextualizedImportedModules.length > 0) {
+      parentModuleNaked._lazyInit({
+        ...parentModuleNaked._initialOptions,
+        imports: contextualizedImportedModules,
+      });
+
+      rerenderComponent();
+    }
+  }, []);
 }

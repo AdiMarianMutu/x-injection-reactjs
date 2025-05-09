@@ -4,6 +4,8 @@ import { REACT_X_INJECTION_CONTEXT, REACT_X_INJECTION_EXPOSED_COMPONENT_MODULE_C
 
 export function useExposeComponentModuleContext(): void {
   const componentModule = useContext(REACT_X_INJECTION_CONTEXT);
+  if (componentModule.ctx.toNaked().isAppModule) return;
+
   const exposed = useContext(REACT_X_INJECTION_EXPOSED_COMPONENT_MODULE_CONTEXT);
 
   exposed.set(componentModule.ctx.toString(), componentModule.ctx);

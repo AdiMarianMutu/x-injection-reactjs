@@ -13,5 +13,3 @@ export const REACT_X_INJECTION_CONTEXT = createContext<{ ctx: IComponentProvider
 export const REACT_X_INJECTION_EXPOSED_COMPONENT_MODULE_CONTEXT = createContext<Map<string, IComponentProviderModule>>(
   new Map()
 );
-
-export const REACT_X_INJECTION_EXPOSED_COMPONENT_RERENDER_ON_CTX_CHANGE = createContext<{ r: number }>({ r: 0 });
