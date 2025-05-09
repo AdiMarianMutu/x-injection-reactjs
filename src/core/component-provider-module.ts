@@ -24,7 +24,7 @@ export class ComponentProviderModule extends ProviderModule implements IComponen
         ...options,
         // By default components should have all their providers
         // defined as transient because a component may have more than one instance of itself.
-        defaultScope: options.defaultScope ?? InjectionScope.Transient,
+        defaultScope: options.defaultScope ?? InjectionScope.Request,
         identifier: Symbol(`Component${options.identifier.description}`),
       })
     );
