@@ -482,12 +482,12 @@ class ApiService {
   private sendToLocation(user: User, location: any): {};
 }
 
-const ApiModule = new ProviderModule({
+const ApiModule = new ComponentProviderModule({
   identifier: Symbol('ApiModule'),
   providers: [UserService, ApiService],
 });
 
-const ApiModuleMocked = new ProviderModule({
+const ApiModuleMocked = new ComponentProviderModule({
   identifier: Symbol('ApiModule_MOCK'),
   providers: [
     {
