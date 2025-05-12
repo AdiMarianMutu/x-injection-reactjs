@@ -1,7 +1,7 @@
 import type { ProviderToken } from '@adimm/x-injection';
 import { useMemo } from 'react';
 
-import { XInjectionHookFactoryError } from '../errors';
+import { InjectionHookFactoryError } from '../errors';
 import { useComponentModule } from './hooks';
 
 export function hookFactory<P extends HookParams, D extends any[], T>({
@@ -13,7 +13,7 @@ export function hookFactory<P extends HookParams, D extends any[], T>({
 
     const deps = useMemo(() => {
       if (inject.length === 0) {
-        throw new XInjectionHookFactoryError(componentModule, `The 'deps' property array is missing!`);
+        throw new InjectionHookFactoryError(componentModule, `The 'deps' property array is missing!`);
       }
 
       return componentModule.getMany(...inject);

@@ -15,7 +15,7 @@ import {
   useInjectMany,
   type IComponentProviderModule,
 } from '../src';
-import { XInjectionHookFactoryError } from '../src/errors';
+import { InjectionHookFactoryError } from '../src/errors';
 import { GlobalService, RandomModule, RandomService, UserModule, UserService } from './setup';
 
 // [!!! IMPORTANT !!!]
@@ -257,7 +257,7 @@ describe.each([
             return null;
           });
 
-          expect(() => render(<C />)).toThrow(XInjectionHookFactoryError);
+          expect(() => render(<C />)).toThrow(InjectionHookFactoryError);
         });
 
         it('should successfully compose a custom hook with injected dependencies', async () => {
