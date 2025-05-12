@@ -25,6 +25,7 @@ xInjection ReactJS&nbsp;<a href="https://www.npmjs.com/package/@adimm/x-injectio
   - [Hook Injection](#hook-injection)
 - [Examples](#examples)
   - [Composable components](#composable-components)
+- [Unit Tests](#unit-tests)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 
@@ -464,6 +465,50 @@ export const Autocomplete = provideModuleToComponent(
 This should cover the fundamentals of how you can build a scalable UI by using the `xInjection` Dependency Injection 😊
 
 > **Note:** _Keep in mind that both library ([xInjection](https://www.npmjs.com/package/@adimm/x-injection) & [xInjection ReactJS](https://www.npmjs.com/package/@adimm/x-injection-reactjs)) are still young and being developed, therefore the internals and public API may change in the near future._
+
+## Unit Tests
+
+It is very easy to create mock modules so you can provide them to your components in your unit tests.
+
+```tsx
+class ApiService {
+  constructor(private readonly userService: UserService) {}
+
+  sendRequest<T>(location: LocationParams): Promise<T> {
+    // Pseudo Implementation
+    return this.sendToLocation(user, location);
+  }
+
+  private sendToLocation(user: User, location: any): {};
+}
+
+const ApiModule = new ProviderModule({
+  identifier: Symbol('ApiModule'),
+  providers: [UserService, ApiService],
+});
+
+const ApiModuleMocked = new ProviderModule({
+  identifier: Symbol('ApiModule_MOCK'),
+  providers: [
+    {
+      provide: UserService,
+      useClass: UserService_Mock,
+    },
+    {
+      provide: ApiService,
+      useValue: {
+        sendRequest: (location) => {
+          console.log(location);
+        },
+      },
+    },
+  ],
+});
+
+await act(async () => render(<RealComponent module={ApiModuleMocked} />));
+```
+
+Now what you have to do is just to provide the `ApiModuleMocked` instead of the `ApiModule` 😎
 
 ## Documentation
 
