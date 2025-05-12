@@ -1,19 +1,25 @@
 import type { ProviderToken } from '@adimm/x-injection';
 
-import { useOnce } from '../../helpers';
-import { useInjectOnRender, type UseInjectOptions } from './use-inject-on-render';
+import { useComponentModule } from './use-component-module';
 
 /**
- * React `hook` which can be used inside a component to inject the required {@link provider | dependency}.
+ * Low-level hook which can be used to resolve a single dependency from the current
+ * context module.
  *
- * **Note:** _By using this hook, the dependency will be injected only once after the first component mount process._
- * _If you need to re-inject the dependency on each re-render, you must use the `useInjectOnRender` hook._
- * _It basically acts like a `Request` scope, ensuring that even a `Transient` dependency does not mutate during re-renders._
+ * **Note:** _In order to better modularize your code-base, you should strive to create custom hooks by using the_
+ * _`hookFactory` method to compose a custom hook._
  *
  * @param provider The {@link ProviderToken}.
- * @param options See {@link UseInjectSharedOptions}.
- * @returns Either the {@link T | dependency} or `undefined` if {@link isOptional} is set to `true`.
+ * @param options See {@link UseInjectOptions}.
+ * @returns The resolved {@link T | dependency}.
  */
 export function useInject<T>(provider: ProviderToken<T>, options?: UseInjectOptions): T {
-  return useOnce(() => useInjectOnRender(provider, options));
+  const componentModule = useComponentModule();
+
+  return componentModule.get(provider, options?.isOptional);
 }
+
+export type UseInjectOptions = {
+  /** When set to `false` _(default)_ an exception will be thrown when the `providerOrIdentifier` isn't bound. */
+  isOptional?: boolean;
+};

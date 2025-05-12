@@ -1,5 +1,5 @@
 export * from './react-context';
 export * from './hooks';
-export * from './providers';
 export * from './component-provider-module';
-export * from './utils';
+export * from './provide-module';
+export * from './hook-factory';

@@ -1,14 +1,10 @@
 import {
   InjectionScope,
-  isClass,
-  isClassOrFunction,
   ProviderModule,
   ProviderModuleHelpers,
-  type DependencyProvider,
+  type CloneParams,
   type IProviderModuleNaked,
-  type ProviderClassToken,
   type ProviderModuleOptions,
-  type ProviderValueToken,
 } from '@adimm/x-injection';
 
 import type { IComponentProviderModule, IComponentProviderModuleNaked } from '../types';
@@ -16,21 +12,17 @@ import type { IComponentProviderModule, IComponentProviderModuleNaked } from '..
 /** A superset of the {@link ProviderModule} used to integrate within a `React` component. */
 export class ComponentProviderModule extends ProviderModule implements IComponentProviderModule {
   protected readonly _initializedFromComponent: IComponentProviderModuleNaked['_initializedFromComponent'];
-  protected readonly _initialOptions: IComponentProviderModuleNaked['_initialOptions'];
 
   constructor(options: ProviderModuleOptions) {
     super(
       ProviderModuleHelpers.buildInternalConstructorParams({
         ...options,
-        // By default components should have all their providers
-        // defined as transient because a component may have more than one instance of itself.
-        defaultScope: options.defaultScope ?? InjectionScope.Request,
+        defaultScope: options.defaultScope ?? InjectionScope.Singleton,
         identifier: Symbol(`Component${options.identifier.description}`),
       })
     );
 
     this._initializedFromComponent = false;
-    this._initialOptions = options;
   }
 
   override toNaked(): IComponentProviderModuleNaked & IProviderModuleNaked {
@@ -38,49 +30,57 @@ export class ComponentProviderModule extends ProviderModule implements IComponen
   }
 
   /* istanbul ignore next */
+  override clone(options?: CloneParams): IComponentProviderModule {
+    let providers = [...this.providers];
+
+    if (options?.providersMap) {
+      providers = providers.map((provider) => options.providersMap!(provider, this));
+    }
+
+    const clonedModule = new ComponentProviderModule(
+      ProviderModuleHelpers.buildInternalConstructorParams({
+        isAppModule: this.isAppModule,
+        identifier: Symbol(this.identifier.description!.replace('Component', '')),
+        defaultScope: this.defaultScope.native,
+        dynamicExports: this.dynamicExports,
+        onReady: this.onReady,
+        onDispose: this.onDispose,
+        importedProvidersMap: options?.importedProvidersMap,
+        imports: [...this.imports],
+        providers,
+        exports: [...this.exports],
+      })
+    );
+
+    //@ts-expect-error Read-only method.
+    clonedModule._initializedFromComponent = this._initializedFromComponent;
+
+    return clonedModule;
+  }
+
+  /* istanbul ignore next */
   dispose(): void {
     this._dispose();
   }
 
+  //#region IComponentProviderModuleNaked methods
+
   /**
    * **Publicly visible when the instance is casted to {@link IComponentProviderModuleNaked}.**
    *
-   * See {@link IComponentProviderModuleNaked._convertToContextualizedComponentInstance}.
+   * See {@link IComponentProviderModuleNaked._createContextualizedComponentInstance}.
    */
-  /* istanbul ignore next */
-  protected _convertToContextualizedComponentInstance(): IComponentProviderModule {
-    if (this.isAppModule || this.isDisposed) return this;
+  protected _createContextualizedComponentInstance(): IComponentProviderModule {
+    if (this._initializedFromComponent) return this;
 
-    const contextualizedProviders = this._getProviders().map((provider) => {
-      if (!isClassOrFunction(provider)) {
-        return {
-          ...provider,
-          scope: InjectionScope.Singleton,
-        } as DependencyProvider;
-      }
+    const ctxModule = this.clone().toNaked();
 
-      if (isClass(provider)) {
-        return {
-          scope: InjectionScope.Singleton,
-          provide: provider,
-          useClass: provider,
-        } as ProviderClassToken<any>;
-      }
+    //@ts-expect-error Read-only property
+    ctxModule.identifier = Symbol(`Contextualized${ctxModule.identifier.description}`);
+    ctxModule._initializedFromComponent = true;
 
-      return {
-        provide: provider,
-        useValue: provider,
-      } as ProviderValueToken<any>;
-    });
-
-    const componentModule = new ComponentProviderModule({
-      ...this._initialOptions,
-      providers: contextualizedProviders,
-    });
-
-    //@ts-expect-error Read-only property.
-    componentModule._initializedFromComponent = true;
-
-    return componentModule;
+    return ctxModule;
   }
+
+  //#endregion
 }

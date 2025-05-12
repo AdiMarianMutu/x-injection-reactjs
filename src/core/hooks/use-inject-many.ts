@@ -1,25 +1,21 @@
 import type { ProviderModuleGetManyParam, ProviderModuleGetManySignature, ProviderToken } from '@adimm/x-injection';
 
-import { useOnce } from '../../helpers';
-import type { UseInjectSharedOptions } from '../../types';
-import { useInjectManyOnRender } from './use-inject-many-on-render';
+import { useComponentModule } from './use-component-module';
 
 /**
- * Can be used to retrieve many resolved `dependencies` from the module container at once.
+ * Low-level hook which can be used to resolve multiple dependencies at once from the current
+ * context module.
  *
- * **Note:** _By using this hook, the dependencies will be injected only once after the first component mount process._
- * _If you need to re-inject the dependencies on each re-render, you must use the `useInjectManyOnRender` hook._
+ * **Note:** _In order to better modularize your code-base, you should strive to create custom hooks by using the_
+ * _`hookFactory` method to compose a custom hook._
  *
- * @param options See {@link UseInjectSharedOptions}.
  * @param deps Either one or more {@link ProviderToken}.
  * @returns Tuple containing the {@link D | dependencies}.
  */
-export function useInjectMany<D extends (ProviderModuleGetManyParam<any> | ProviderToken)[]>({
-  deps,
-  options,
-}: {
-  deps: [...(D | unknown[])];
-  options?: UseInjectSharedOptions;
-}): ProviderModuleGetManySignature<D> {
-  return useOnce(() => useInjectManyOnRender({ options, deps }));
+export function useInjectMany<D extends (ProviderModuleGetManyParam<any> | ProviderToken)[]>(
+  ...deps: D | unknown[]
+): ProviderModuleGetManySignature<D> {
+  const componentModule = useComponentModule();
+
+  return componentModule.getMany(...deps);
 }

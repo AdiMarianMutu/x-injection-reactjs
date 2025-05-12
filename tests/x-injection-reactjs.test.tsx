@@ -1,34 +1,22 @@
 import '@testing-library/jest-dom';
 
-import { Injectable, ProviderModuleHelpers, type IProviderModuleNaked } from '@adimm/x-injection';
+import { Injectable, InjectionScope } from '@adimm/x-injection';
 import { render as _render, act, fireEvent, screen, waitFor } from '@testing-library/react';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   ComponentProviderModule,
-  ModuleProvider,
-  TapIntoComponent,
-  useExposeComponentModuleContext,
+  hookFactory,
+  HookWithDeps,
+  PropsWithModule,
+  ProvideModule,
+  provideModuleToComponent,
   useInject,
   useInjectMany,
-  useInjectOnRender,
-  useRerenderOnChildrenModuleContextLoaded,
   type IComponentProviderModule,
-  type IComponentProviderModuleNaked,
 } from '../src';
-import {
-  AppModule,
-  CatService,
-  EmptyService,
-  PropertiesModule,
-  RandomModule,
-  RandomService,
-  RIP_SERVICE_NAME,
-  RipService,
-  TEST_ID,
-  UserService,
-  WithTestId,
-} from './setup';
+import { XInjectionHookFactoryError } from '../src/errors';
+import { GlobalService, RandomModule, RandomService, UserModule, UserService } from './setup';
 
 // [!!! IMPORTANT !!!]
 //
@@ -46,493 +34,561 @@ describe.each([
     _render(ui, { ...(options ?? {}), reactStrictMode: USE_REACT_STRICT_MODE });
 
   describe('Core', () => {
-    afterAll(() => {
-      jest.clearAllMocks();
+    const user = {
+      firstName: 'John',
+      lastName: 'Doe',
+    };
+
+    it('should correctly resolve from the `AppModule`', () => {
+      expect(RandomModule.get(GlobalService) instanceof GlobalService).toBe(true);
     });
 
-    it('should correctly render the component', async () => {
-      await act(async () =>
-        render(<ModuleProvider module={AppModule as any} render={() => <WithTestId></WithTestId>} />)
-      );
+    describe('Module Provider', () => {
+      const TEST_ID = 'module-provider';
 
-      await waitFor(async () => {
-        expect(await screen.findByTestId(TEST_ID)).toBeEmptyDOMElement();
-      });
-    });
+      it('should use the `provideModule` arrow function', async () => {
+        const C = provideModuleToComponent(UserModule, ({ firstName, lastName }: typeof user) => {
+          const service = useInject(UserService);
 
-    it('should correctly inject a dependency into the component from the `AppModule`', async () => {
-      const testId = 'rip-service';
+          return <h1 data-testid={TEST_ID}>Hello {service.generateFullName(firstName, lastName)}</h1>;
+        });
 
-      await act(async () =>
-        render(
-          <ModuleProvider
-            module={AppModule as any}
-            render={() => {
-              const ripService = useInject(RipService);
-
-              return <span data-testid={testId}>{ripService.name}</span>;
-            }}
-          />
-        )
-      );
-
-      await waitFor(async () => {
-        expect(await screen.findByTestId(testId)).toHaveTextContent(RIP_SERVICE_NAME);
-      });
-    });
-
-    it('should dispose the provided module on unmount', async () => {
-      const m = new ComponentProviderModule({
-        identifier: Symbol('DISPOSE_MODULE_ON_UNMOUNT'),
-      }).toNaked();
-      let componentModuleInstance: IComponentProviderModule;
-
-      const { unmount } = await act(async () =>
-        render(
-          <TapIntoComponent
-            contextInstance={() => ({
-              tryGet: m,
-              thenDo: (ctx) => {
-                componentModuleInstance = ctx;
-              },
-            })}>
-            <ModuleProvider
-              module={m}
-              disposeModuleOnUnmount={true}
-              render={() => {
-                useExposeComponentModuleContext();
-
-                return <></>;
-              }}
-            />
-          </TapIntoComponent>
-        )
-      );
-      unmount();
-
-      await waitFor(async () => {
-        expect(componentModuleInstance.toNaked().container).toBe(null);
-      });
-    });
-
-    it('should dispose and re-init the provided module on mount/unmount', async () => {
-      const onReadyCb = jest.fn();
-      const onDisposeCb = jest.fn();
-      let componentModuleInstance: IComponentProviderModuleNaked & IProviderModuleNaked;
-
-      const mo = ProviderModuleHelpers.buildInternalConstructorParams({
-        identifier: Symbol('DISPOSE_&_REINIT_TEST'),
-        providers: [EmptyService],
-        onReady: onReadyCb,
-        onDispose: onDisposeCb,
-      });
-      const m = new ComponentProviderModule(mo).toNaked();
-
-      const T = () => (
-        <TapIntoComponent
-          contextInstance={() => ({
-            tryGet: m,
-            thenDo: (ctx) => {
-              componentModuleInstance = ctx.toNaked();
-            },
-          })}>
-          <ModuleProvider
-            module={m}
-            disposeModuleOnUnmount={true}
-            tryReInitModuleOnMount={mo}
-            render={() => {
-              useExposeComponentModuleContext();
-
-              return <></>;
-            }}
-          />
-        </TapIntoComponent>
-      );
-
-      const { unmount } = await act(async () => render(<T />));
-      unmount();
-
-      await waitFor(async () => {
-        expect(onDisposeCb).toHaveBeenCalledTimes(1);
-        expect(componentModuleInstance.container).toBe(null);
-      });
-
-      await act(async () => render(<T />));
-
-      await waitFor(async () => {
-        expect(onReadyCb).toHaveBeenCalled();
-        expect(componentModuleInstance.container).not.toBe(null);
-        expect(componentModuleInstance.get(EmptyService) instanceof EmptyService).toBe(true);
-      });
-    });
-
-    it('should inject multiple dependencies at once when using `useInjectMany`', async () => {
-      await act(async () =>
-        render(
-          <ModuleProvider
-            module={PropertiesModule}
-            render={() => {
-              const [catService, userService] = useInjectMany({ deps: [CatService, UserService] });
-
-              return (
-                <button
-                  data-testid="btn"
-                  onClick={() => {
-                    expect(catService instanceof CatService).toBe(true);
-                    expect(userService instanceof UserService).toBe(true);
-                  }}>
-                  update properties
-                </button>
-              );
-            }}
-          />
-        )
-      );
-
-      fireEvent.click(await screen.findByTestId('btn'));
-    });
-
-    describe('Component InjectionScope', () => {
-      it('each component should have its own transient dependency instance', async () => {
-        const valuesGenerated: number[] = [];
-
-        const T = () => (
-          <ModuleProvider
-            module={RandomModule}
-            render={() => {
-              const randomService = useInject(RandomService);
-
-              valuesGenerated.push(randomService.random);
-
-              return <></>;
-            }}
-          />
-        );
-
-        await act(async () => render(<T />));
-        await act(async () => render(<T />));
+        await act(async () => render(<C firstName={user.firstName} lastName={user.lastName} />));
 
         await waitFor(async () => {
-          expect([...new Set(valuesGenerated)].length).toBeGreaterThan(1);
+          expect(await screen.findByTestId(TEST_ID)).toHaveTextContent(`Hello ${user.firstName} ${user.lastName}`);
         });
       });
 
-      it('should not mutate the dependency during re-renders when using `useInject`', async () => {
-        const valuesGenerated: number[] = [];
+      it('should use the `ProvideModule` component function', async () => {
+        function MyComponent({ firstName, lastName }: PropsWithModule<typeof user>) {
+          const service = useInject(UserService);
 
-        const A = () => {
-          const randomService = useInject(RandomService);
+          return <h1 data-testid={TEST_ID}>Hello {service.generateFullName(firstName, lastName)}</h1>;
+        }
 
-          valuesGenerated.push(randomService.random);
-
-          return <></>;
-        };
-
-        const T = () => (
-          <ModuleProvider module={RandomModule}>
-            <A />
-          </ModuleProvider>
-        );
-
-        const { rerender } = await act(async () => render(<T />));
-
-        [new Array(4)].forEach(() => rerender(<T />));
-
-        await waitFor(async () => {
-          expect([...new Set(valuesGenerated)].length).toBe(1);
-        });
-      });
-
-      it('should re-inject dependency on each re-render when using `useInjectOnRender`', async () => {
-        const valuesGenerated: number[] = [];
-
-        function T() {
+        function App() {
           return (
-            <ModuleProvider
-              module={RandomModule}
-              render={() => {
-                const randomService = useInjectOnRender(RandomService);
-
-                valuesGenerated.push(randomService.random);
-
-                return <></>;
-              }}
-            />
+            <ProvideModule module={UserModule}>
+              <MyComponent firstName={user.firstName} lastName={user.lastName} />
+            </ProvideModule>
           );
         }
 
-        const { rerender } = await act(async () => render(<T />));
-
-        [new Array(4)].forEach(() => rerender(<T />));
+        await act(async () => render(<App />));
 
         await waitFor(async () => {
-          expect([...new Set(valuesGenerated)].length).toBeGreaterThan(1);
-        });
-      });
-
-      it('should correctly expose to the consumer component the scoped dependencies instances from within the component context from multiple injection hooks invokations', async () => {
-        let service0: CatService;
-        let service1: UserService;
-        let service2: RandomService;
-        let service3: RipService;
-        let service4: EmptyService;
-
-        const m = new ComponentProviderModule({
-          identifier: Symbol('I hate Apple products :)'),
-          providers: [CatService, UserService, RandomService, RipService, EmptyService],
-        });
-
-        await act(async () =>
-          render(
-            <TapIntoComponent
-              contextInstance={() => ({
-                tryGet: m,
-                thenDo: (ctx) => {
-                  [service0, service1, service2, service3, service4] = ctx.getMany(
-                    CatService,
-                    UserService,
-                    RandomService,
-                    RipService,
-                    EmptyService
-                  );
-                },
-              })}>
-              <ModuleProvider
-                module={m}
-                render={() => {
-                  useExposeComponentModuleContext();
-
-                  useInjectMany({ deps: [CatService, UserService] });
-                  useInject(RandomService);
-                  useInject(RipService);
-                  useInjectOnRender(EmptyService);
-
-                  return null;
-                }}
-              />
-            </TapIntoComponent>
-          )
-        );
-
-        await waitFor(async () => {
-          expect(service0 instanceof CatService).toBe(true);
-          expect(service1 instanceof UserService).toBe(true);
-          expect(service2 instanceof RandomService).toBe(true);
-          expect(service3 instanceof RipService).toBe(true);
-          expect(service4 instanceof EmptyService).toBe(true);
-        });
-      });
-    });
-  });
-
-  it('should not convert the AppModule or a disposed module to a contextualized module', async () => {});
-
-  describe('Real World Scenarios', () => {
-    afterAll(() => {
-      jest.clearAllMocks();
-    });
-
-    describe('Calculator App', () => {
-      afterAll(() => {
-        jest.clearAllMocks();
-      });
-
-      const SUM_TEST_ID = 'sum';
-      const SUB_TEST_ID = 'sub';
-
-      @Injectable()
-      class CalculatorAppService {
-        updateComponentSumValue!: (n: number) => void;
-        updateComponentSubValue!: (n: number) => void;
-
-        sum(...numbers: number[]): number {
-          const result = numbers.reduce((prev, curr) => prev + curr, 0);
-
-          this.updateComponentSumValue(result);
-
-          return result;
-        }
-
-        sub(...numbers: number[]): number {
-          const result = numbers.reduce((prev, curr) => prev - curr);
-
-          this.updateComponentSubValue(result);
-
-          return result;
-        }
-      }
-
-      const CalculatorAppModule = new ComponentProviderModule({
-        identifier: Symbol('CalculatorAppModule'),
-        providers: [CalculatorAppService],
-      });
-
-      const CalculatorApp = () => {
-        return (
-          <ModuleProvider
-            module={CalculatorAppModule}
-            render={() => {
-              useExposeComponentModuleContext();
-
-              const [sumValue, setSumValue] = useState(0);
-              const [subValue, setSubValue] = useState(0);
-
-              const service = useInject(CalculatorAppService);
-
-              service.updateComponentSumValue = setSumValue;
-              service.updateComponentSubValue = setSubValue;
-
-              return (
-                <>
-                  <p data-testid={SUM_TEST_ID}>{sumValue}</p>
-                  <p data-testid={SUB_TEST_ID}>{subValue}</p>
-                </>
-              );
-            }}
-          />
-        );
-      };
-
-      it('should correctly update the component when the component consumer uses its service', async () => {
-        let calculatorService0: CalculatorAppService;
-        let calculatorService1: CalculatorAppService;
-
-        await act(async () =>
-          render(
-            <>
-              <TapIntoComponent
-                contextInstance={() => ({
-                  tryGet: CalculatorAppModule,
-                  thenDo: (ctx) => {
-                    calculatorService0 = ctx.get(CalculatorAppService);
-                  },
-                })}>
-                <div data-testid="0">
-                  <CalculatorApp />
-                </div>
-              </TapIntoComponent>
-
-              <TapIntoComponent
-                contextInstance={(ctxMap) => {
-                  const ctx = ctxMap.get(CalculatorAppModule.toString());
-                  if (!ctx) return;
-
-                  calculatorService1 = ctx.get(CalculatorAppService);
-                }}>
-                <div data-testid="1">
-                  <CalculatorApp />
-                </div>
-              </TapIntoComponent>
-            </>
-          )
-        );
-
-        await waitFor(async () => {
-          calculatorService0.sum(22, 3, 1998);
-          calculatorService0.sub(1969, 9, 29);
-          calculatorService1.sum(23, 10, 1999);
-          calculatorService1.sub(2028, 27);
-
-          const sumElVal0 = (await screen.findByTestId('0')).querySelector(`p[data-testid="${SUM_TEST_ID}"]`);
-          const subElVal0 = (await screen.findByTestId('0')).querySelector(`p[data-testid="${SUB_TEST_ID}"]`);
-          const sumElVal1 = (await screen.findByTestId('1')).querySelector(`p[data-testid="${SUM_TEST_ID}"]`);
-          const subElVal1 = (await screen.findByTestId('1')).querySelector(`p[data-testid="${SUB_TEST_ID}"]`);
-
-          expect(sumElVal0).toHaveTextContent('2023');
-          expect(subElVal0).toHaveTextContent('1931');
-          expect(sumElVal1).toHaveTextContent('2032');
-          expect(subElVal1).toHaveTextContent('2001');
+          expect(await screen.findByTestId(TEST_ID)).toHaveTextContent(`Hello ${user.firstName} ${user.lastName}`);
         });
       });
     });
 
-    describe('Composable - Nested Scoped Services', () => {
-      afterAll(() => {
-        jest.clearAllMocks();
+    describe('Injection Scope', () => {
+      describe('Singleton', () => {
+        it('should be the same instance between re-renders', async () => {
+          const randomValues: number[] = [];
+
+          const C = provideModuleToComponent(RandomModule, () => {
+            const service = useInject(RandomService);
+
+            randomValues.push(service.random);
+
+            return null;
+          });
+
+          const { rerender } = await act(async () => render(<C />));
+          rerender(<C />);
+
+          await waitFor(async () => {
+            expect([...new Set(randomValues)].length).toBe(1);
+          });
+        });
       });
 
+      describe('Transient', () => {
+        const RandomServiceTransientModule = new ComponentProviderModule({
+          identifier: Symbol('RandomServiceSingletonModule'),
+          providers: [
+            {
+              provide: RandomService,
+              useClass: RandomService,
+              scope: InjectionScope.Transient,
+            },
+          ],
+        });
+
+        it('should NOT be the same instance between re-renders', async () => {
+          const randomValues: number[] = [];
+
+          const C = provideModuleToComponent(RandomServiceTransientModule, () => {
+            const service = useInject(RandomService);
+
+            randomValues.push(service.random);
+
+            return null;
+          });
+
+          const { rerender } = await act(async () => render(<C />));
+          await act(async () => rerender(<C />));
+
+          await waitFor(async () => {
+            expect([...new Set(randomValues)].length).toBeGreaterThan(1);
+          });
+        });
+      });
+
+      describe('Request', () => {
+        @Injectable()
+        class Service {
+          random = Math.random();
+
+          constructor(
+            readonly rndService0: RandomService,
+            readonly rndService1: RandomService
+          ) {}
+        }
+
+        const ServiceRequestModule = new ComponentProviderModule({
+          identifier: Symbol('RandomServiceSingletonModule'),
+          defaultScope: InjectionScope.Request,
+          providers: [Service, RandomService],
+        });
+
+        it('should NOT be the same instance between re-renders but constructor dependencies should be of the same instance', async () => {
+          const mainRandomValues: number[] = [];
+          const randomValues = {
+            from1stService: undefined as unknown as number,
+            from2ndService: undefined as unknown as number,
+          };
+
+          const C = provideModuleToComponent(ServiceRequestModule, () => {
+            const service = useInject(Service);
+
+            mainRandomValues.push(service.random);
+            randomValues.from1stService = service.rndService0.random;
+            randomValues.from2ndService = service.rndService1.random;
+
+            return null;
+          });
+
+          const { rerender } = await act(async () => render(<C />));
+
+          await waitFor(async () => {
+            expect(randomValues.from1stService).toBe(randomValues.from2ndService);
+          });
+
+          await act(async () => rerender(<C />));
+
+          await waitFor(async () => {
+            expect(randomValues.from1stService).toBe(randomValues.from2ndService);
+            expect([...new Set(mainRandomValues)].length).toBeGreaterThan(1);
+          });
+        });
+      });
+    });
+
+    describe('Hooks', () => {
       @Injectable()
-      class InputBoxService {
-        currentText = '';
+      class BaseService {
+        value = '';
+      }
 
-        renderText!: (t: string) => void;
-
-        updateText(t: string) {
-          this.currentText = t;
-
-          this.renderText(t);
+      @Injectable()
+      class InnerService {
+        constructor(readonly baseService: BaseService) {
+          // Should override also the `BaseService` original class value when `InnerService` is resolved
+          this.baseService.value = 'Hello';
         }
       }
 
-      @Injectable()
-      class AutocompleteDropdownService {
-        constructor(public readonly inputBoxService: InputBoxService) {}
-      }
-
-      const InputBoxModule = new ComponentProviderModule({
-        identifier: Symbol('InputBoxModule'),
-        providers: [InputBoxService],
-        exports: [InputBoxService],
+      const BaseModule = new ComponentProviderModule({
+        identifier: Symbol('HookBaseModule'),
+        providers: [BaseService],
+        exports: [BaseService],
       });
 
-      const AutocompleteDropdownModule = new ComponentProviderModule({
-        identifier: Symbol('AutocompleteDropdownModule'),
-        imports: [InputBoxModule],
-        providers: [AutocompleteDropdownService],
-        exports: [AutocompleteDropdownService],
+      const InnerModule = new ComponentProviderModule({
+        identifier: Symbol('HookInnerModule'),
+        providers: [InnerService],
+        imports: [BaseModule, RandomModule, UserModule],
       });
 
-      const INPUT_BOX_TEXT = 'Hello World!';
+      it('should inject multiple dependencies at once when using `useInjectMany`', async () => {
+        const C = provideModuleToComponent(InnerModule, () => {
+          const [baseService, innerService, userService, UNDEFINED_DEP] = useInjectMany(
+            BaseService,
+            InnerService,
+            UserService,
+            {
+              provider: 'UNDEFINED_DEP',
+              isOptional: true,
+            }
+          );
 
-      const InputBox = () => (
-        <ModuleProvider
-          module={InputBoxModule}
-          render={() => {
-            useExposeComponentModuleContext();
+          return (
+            <button
+              data-testid="btn"
+              onClick={() => {
+                expect(baseService instanceof BaseService).toBe(true);
+                expect(innerService instanceof InnerService).toBe(true);
+                expect(userService instanceof UserService).toBe(true);
+                expect(UNDEFINED_DEP).toBeUndefined();
+              }}>
+              assert
+            </button>
+          );
+        });
 
-            const [text, setText] = useState('');
+        await act(async () => render(<C />));
 
-            const service = useInject(InputBoxService);
+        fireEvent.click(await screen.findByTestId('btn'));
+      });
 
-            service.renderText = setText;
+      describe('Factory', () => {
+        it('should throw an error while trying to compose an hook without dependencies', async () => {
+          const useHookError = hookFactory({
+            use: () => {},
+            inject: [],
+          });
+
+          const C = provideModuleToComponent(InnerModule, () => {
+            useHookError();
+
+            return null;
+          });
+
+          expect(() => render(<C />)).toThrow(XInjectionHookFactoryError);
+        });
+
+        it('should successfully compose a custom hook with injected dependencies', async () => {
+          const useGenerateUserId = hookFactory({
+            use: ({
+              firstName,
+              lastName,
+              deps: [userService, randomService],
+            }: HookWithDeps<typeof user, [UserService, RandomService]>) => {
+              return {
+                id: randomService.random,
+                fullName: `${userService.generateFullName(firstName, lastName)}`,
+              };
+            },
+            inject: [UserService, RandomService],
+          });
+
+          const C = provideModuleToComponent(InnerModule, ({ firstName, lastName }: typeof user) => {
+            const user = useGenerateUserId({ firstName, lastName });
+
+            return (
+              <h1>
+                <p data-testid="user-id">{user.id}</p>
+                <p data-testid="full-name">{user.fullName}</p>
+              </h1>
+            );
+          });
+
+          await act(async () => render(<C firstName={user.firstName} lastName={user.lastName} />));
+
+          await waitFor(async () => {
+            expect(Number((await screen.findByTestId('user-id')).innerHTML)).not.toBeNaN();
+            expect(await screen.findByTestId('full-name')).toHaveTextContent(`${user.firstName} ${user.lastName}`);
+          });
+        });
+
+        it('should successfully compose a nested custom hook with injected dependencies', async () => {
+          const useGenerateUserId = hookFactory({
+            use: ({
+              firstName,
+              lastName,
+              deps: [, baseService, userService, randomService],
+            }: HookWithDeps<typeof user, [InnerService, BaseService, UserService, RandomService]>) => {
+              return {
+                id: randomService.random,
+                greetings: `${baseService.value} ${userService.generateFullName(firstName, lastName)}`,
+              };
+            },
+            inject: [InnerService, BaseService, UserService, RandomService],
+          });
+
+          const C = provideModuleToComponent(InnerModule, ({ firstName, lastName }: typeof user) => {
+            const user = useGenerateUserId({ firstName, lastName });
+
+            return (
+              <h1>
+                <p data-testid="user-id">{user.id}</p>
+                <p data-testid="greetings">{user.greetings}</p>
+              </h1>
+            );
+          });
+
+          await act(async () => render(<C firstName={user.firstName} lastName={user.lastName} />));
+
+          await waitFor(async () => {
+            expect(Number((await screen.findByTestId('user-id')).innerHTML)).not.toBeNaN();
+            expect(await screen.findByTestId('greetings')).toHaveTextContent(
+              `Hello ${user.firstName} ${user.lastName}`
+            );
+          });
+        });
+      });
+    });
+
+    describe('Parent inheritance', () => {
+      it('AutoComplete -> Inputbox & (Dropdown -> ListView)', async () => {
+        const dropdownNumberOfItems = 10;
+        const dropdownDefaultValue = 'Hello World!';
+        let autocompleteServiceA!: AutoCompleteService;
+        let autocompleteServiceB!: AutoCompleteService;
+
+        //#region ListView Component
+
+        @Injectable()
+        class ListViewService {
+          numberOfItems = 0;
+
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          setNumberOfItems(n: number): void {
+            throw new Error('NOT IMPLEMENTED');
+          }
+        }
+
+        const ListViewModule = new ComponentProviderModule({
+          identifier: Symbol('ListViewModule'),
+          providers: [ListViewService],
+          exports: [ListViewService],
+        });
+
+        const ListViewComponent = provideModuleToComponent(ListViewModule, () => {
+          const service = useInject(ListViewService);
+          const [, setNumberOfItems] = useState(service.numberOfItems);
+
+          service.setNumberOfItems = (n: number) => {
+            service.numberOfItems = n;
+            setNumberOfItems(n);
+          };
+
+          return <div data-testid="list-view">{service.numberOfItems}</div>;
+        });
+
+        //#endregion
+
+        //#region Dropdown Component
+
+        @Injectable()
+        class DropdownService {
+          constructor(readonly listViewService: ListViewService) {
+            // Should be overriden by the `AutoComplete` service with the value from `dropdownNumberOfItems`
+            this.listViewService.numberOfItems = 5;
+          }
+        }
+
+        const DropdownModule = new ComponentProviderModule({
+          identifier: Symbol('DropdownModule'),
+          imports: [ListViewModule],
+          providers: [DropdownService],
+          exports: [ListViewModule, DropdownService],
+        });
+
+        const DropdownComponent = ({ module }: { module?: IComponentProviderModule }) => {
+          return (
+            <div data-test="dropdown">
+              <ListViewComponent module={module} />
+            </div>
+          );
+        };
+
+        //#endregion
+
+        //#region Inputbox Component
+
+        @Injectable()
+        class InputboxService {
+          value = '';
+        }
+
+        const InputboxModule = new ComponentProviderModule({
+          identifier: Symbol('InputboxModule'),
+          providers: [InputboxService],
+          exports: [InputboxService],
+        });
+
+        const InputboxComponent = provideModuleToComponent(
+          InputboxModule,
+          ({ defaultValue }: { defaultValue: string }) => {
+            const service = useInject(InputboxService);
 
             useEffect(() => {
-              service.updateText(INPUT_BOX_TEXT);
+              service.value = defaultValue;
             }, []);
 
-            return <input data-testid="input-box" value={text} onChange={(e) => service.updateText(e.target.value)} />;
-          }}
-        />
-      );
-
-      const AutocompleteDropdown = () => {
-        return (
-          <ModuleProvider
-            module={AutocompleteDropdownModule}
-            render={() => {
-              useRerenderOnChildrenModuleContextLoaded();
-
-              const service = useInjectOnRender(AutocompleteDropdownService);
-
-              return (
-                <>
-                  <InputBox />
-
-                  <span data-testid="dropdown">{service.inputBoxService.currentText}</span>
-                </>
-              );
-            }}
-          />
+            return (
+              <input
+                data-testid="inputbox"
+                value={service.value}
+                onChange={(e) => {
+                  service.value = e.currentTarget.value;
+                }}
+              />
+            );
+          }
         );
-      };
 
-      it('should automatically resolve the parent service dependencies from the children context module by using the `useRerenderOnChildrenModuleContextLoaded` hook', async () => {
-        await act(async () => render(<AutocompleteDropdown />));
+        //#endregion
 
-        const dropdownEl = await screen.findByTestId('dropdown');
+        //#region AutoComplete Component
+
+        @Injectable()
+        class AutoCompleteService {
+          constructor(
+            readonly inputboxService: InputboxService,
+            readonly dropdownService: DropdownService
+          ) {
+            this.dropdownService.listViewService.numberOfItems = dropdownNumberOfItems;
+          }
+        }
+
+        const AutoCompleteModule = new ComponentProviderModule({
+          identifier: Symbol('AutoCompleteModule'),
+          imports: [InputboxModule, DropdownModule],
+          providers: [AutoCompleteService],
+          exports: [AutoCompleteService],
+        });
+
+        const AutoCompleteComponent = provideModuleToComponent<{
+          testId: string;
+          serCb?: (ser: AutoCompleteService) => void;
+        }>(AutoCompleteModule, ({ module, testId, serCb }) => {
+          const service = useInject(AutoCompleteService);
+          serCb?.(service);
+
+          return (
+            <div data-testid={testId}>
+              <InputboxComponent defaultValue={dropdownDefaultValue} module={module} />
+              <ProvideModule module={module!}>
+                <DropdownComponent />
+              </ProvideModule>
+            </div>
+          );
+        });
+
+        //#endregion
+
+        const { rerender } = await act(async () =>
+          render(<AutoCompleteComponent testId="a" serCb={(x) => (autocompleteServiceA = x)} />)
+        );
 
         await waitFor(async () => {
-          expect(dropdownEl).toHaveTextContent('Hello World!');
+          expect(Number((await screen.findByTestId('list-view')).innerHTML)).toBe(dropdownNumberOfItems);
+        });
+
+        act(() => {
+          autocompleteServiceA.dropdownService.listViewService.setNumberOfItems(22032013);
+        });
+
+        await waitFor(async () => {
+          expect(Number((await screen.findByTestId('list-view')).innerHTML)).toBe(22032013);
+        });
+
+        await act(async () => rerender(<AutoCompleteComponent testId="a" />));
+
+        await waitFor(async () => {
+          expect(Number((await screen.findByTestId('list-view')).innerHTML)).toBe(22032013);
+        });
+
+        ///////
+
+        const { rerender: rerender2 } = await act(async () =>
+          render(<AutoCompleteComponent testId="b" serCb={(x) => (autocompleteServiceB = x)} />)
+        );
+
+        await waitFor(async () => {
+          expect(Number((await screen.findByTestId('b'))!.querySelector('[data-testid="list-view"]')!.innerHTML)).toBe(
+            dropdownNumberOfItems
+          );
+        });
+
+        act(() => {
+          autocompleteServiceB.dropdownService.listViewService.setNumberOfItems(22031998);
+        });
+
+        await waitFor(async () => {
+          expect(Number((await screen.findByTestId('b'))!.querySelector('[data-testid="list-view"]')!.innerHTML)).toBe(
+            22031998
+          );
+        });
+
+        await act(async () => rerender2(<AutoCompleteComponent testId="b" />));
+
+        await waitFor(async () => {
+          expect(Number((await screen.findByTestId('b'))!.querySelector('[data-testid="list-view"]')!.innerHTML)).toBe(
+            22031998
+          );
+        });
+      });
+    });
+
+    describe('Component Life Cycle', () => {
+      it('should dispose the contextualized module on unmount', async () => {
+        let isDisposed = false;
+
+        const m = new ComponentProviderModule({
+          identifier: Symbol('DISPOSE_MODULE_ON_UNMOUNT'),
+          onDispose: async () => {
+            isDisposed = true;
+          },
+        }).toNaked();
+
+        const { unmount } = await act(async () =>
+          render(
+            <ProvideModule module={m}>
+              <></>
+            </ProvideModule>
+          )
+        );
+
+        unmount();
+
+        await waitFor(async () => {
+          expect(isDisposed).toBe(true);
+        });
+      });
+
+      it('should dispose the contextualized module on unmount and create a new on on mount', async () => {
+        let isDisposed = false;
+
+        const m = new ComponentProviderModule({
+          identifier: Symbol('DISPOSE_MODULE_ON_UNMOUNT'),
+          onReady: async () => {
+            isDisposed = false;
+          },
+          onDispose: async () => {
+            isDisposed = true;
+          },
+        }).toNaked();
+
+        const { unmount } = await act(async () =>
+          render(
+            <ProvideModule module={m}>
+              <></>
+            </ProvideModule>
+          )
+        );
+
+        unmount();
+
+        await waitFor(async () => {
+          expect(isDisposed).toBe(true);
+        });
+
+        await act(async () =>
+          render(
+            <ProvideModule module={m}>
+              <></>
+            </ProvideModule>
+          )
+        );
+
+        await waitFor(async () => {
+          expect(isDisposed).toBe(false);
         });
       });
     });

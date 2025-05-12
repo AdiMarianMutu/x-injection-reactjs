@@ -1,3 +1,2 @@
-export * from './use-once';
+export * from './use-contextualized-module';
 export * from './use-effect-once';
-export * from './use-rerender';
