@@ -218,7 +218,7 @@ export function UserInfo({ firstName, lastName }: UserInfoProps) {
 
 In a real world scenario, you'll definitely have custom components which render other custom components and so on... _(like a [Matryoshka doll](https://en.wikipedia.org/wiki/Matryoshka_doll))_
 
-So you may find yourself wanting to be able to control a dependency/service of a child component from a parent component, with `xInject` this is very easy to achieve thanks to the `ProviderModule` architecture, because each `module` can `import` and `export` other dependencies _(or modules)_ it fits in perfectly within the [declarative programming](https://en.wikipedia.org/wiki/Declarative_programming) world!
+So you may find yourself wanting to be able to control a dependency/service of a child component from a parent component, with `xInjection` this is very easy to achieve thanks to the `ProviderModule` architecture, because each `module` can `import` and `export` other dependencies _(or modules)_ it fits in perfectly within the [declarative programming](https://en.wikipedia.org/wiki/Declarative_programming) world!
 
 In this example, we'll build 4 components, each with its own purpose. However, the `autocomplete` component will be the one capable of accessing the services of all of them.
 
@@ -506,10 +506,9 @@ const ApiModuleMocked = new ComponentProviderModule({
   ],
 });
 
+// Now all the dependencies used inside the `RealComponent` will be automatically resolved from the `ApiModuleMocked` component module.
 await act(async () => render(<RealComponent module={ApiModuleMocked} />));
 ```
-
-Now what you have to do is just to provide the `ApiModuleMocked` instead of the `ApiModule` 😎
 
 ## Documentation
 
