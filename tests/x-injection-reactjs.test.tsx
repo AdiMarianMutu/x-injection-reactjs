@@ -84,117 +84,121 @@ describe.each([
     });
 
     describe('Performance', () => {
-      it('using `ProvideModule` should not cause an immediate re-render', async () => {
-        let cnt = 0;
+      describe('ProviderModule', () => {
+        it('should not cause an immediate re-render', async () => {
+          let cnt = 0;
 
-        function MyComponent() {
-          cnt++;
+          function MyComponent() {
+            cnt++;
 
-          return null;
-        }
+            return null;
+          }
 
-        function App() {
-          return (
-            <ProvideModule module={UserModule}>
-              <MyComponent />
-            </ProvideModule>
-          );
-        }
+          function App() {
+            return (
+              <ProvideModule module={UserModule}>
+                <MyComponent />
+              </ProvideModule>
+            );
+          }
 
-        await act(async () => render(<App />));
+          await act(async () => render(<App />));
 
-        await waitFor(async () => {
-          expect(cnt).toBe(
-            // When strict mode is enabled react will automatically double mount the component
-            USE_REACT_STRICT_MODE ? 2 : 1
-          );
-        });
-      });
-
-      it('using `provideModuleToComponent` should not cause an immediate re-render', async () => {
-        let cnt = 0;
-
-        const MyComponent = provideModuleToComponent(UserModule, () => {
-          cnt++;
-
-          return null;
+          await waitFor(async () => {
+            expect(cnt).toBe(
+              // When strict mode is enabled react will automatically double mount the component
+              USE_REACT_STRICT_MODE ? 2 : 1
+            );
+          });
         });
 
-        function App() {
-          return <MyComponent />;
-        }
+        it('should cause a re-render only on props change', async () => {
+          let cnt = 0;
 
-        await act(async () => render(<App />));
-
-        await waitFor(async () => {
-          expect(cnt).toBe(
-            // When strict mode is enabled react will automatically double mount the component
-            USE_REACT_STRICT_MODE ? 2 : 1
-          );
-        });
-      });
-
-      it('using `ProvideModule` should cause a re-render only on props change', async () => {
-        let cnt = 0;
-
-        function _MyComponent({ value }: any) {
-          cnt++;
-          return null;
-        }
-
-        const MyComponent = React.memo(_MyComponent);
-
-        function App({ value }: any) {
-          return (
-            <ProvideModule module={UserModule}>
-              <MyComponent value={value} />
-            </ProvideModule>
-          );
-        }
-
-        const { rerender } = render(<App value={1} />);
-
-        await waitFor(() => {
-          expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
-        });
-
-        cnt = 0;
-
-        rerender(<App value={2} />);
-
-        await waitFor(() => {
-          // When strict mode is enabled react will automatically double mount the component
-          expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
-        });
-      });
-
-      it('using `provideModuleToComponent` should cause a re-render only on props change', async () => {
-        let cnt = 0;
-
-        const MyComponent = React.memo(
-          provideModuleToComponent(UserModule, ({ value }: any) => {
+          function _MyComponent({ value }: any) {
             cnt++;
             return null;
-          })
-        );
+          }
 
-        function App({ value }: { value: number }) {
-          return <MyComponent value={value} />;
-        }
+          const MyComponent = React.memo(_MyComponent);
 
-        const { rerender } = render(<App value={1} />);
+          function App({ value }: any) {
+            return (
+              <ProvideModule module={UserModule}>
+                <MyComponent value={value} />
+              </ProvideModule>
+            );
+          }
 
-        await waitFor(() => {
-          expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
+          const { rerender } = render(<App value={1} />);
+
+          await waitFor(() => {
+            expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
+          });
+
+          cnt = 0;
+
+          rerender(<App value={2} />);
+
+          await waitFor(() => {
+            // When strict mode is enabled react will automatically double mount the component
+            expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
+          });
+        });
+      });
+
+      describe('provideModuleToComponent', () => {
+        it('should not cause an immediate re-render', async () => {
+          let cnt = 0;
+
+          const MyComponent = provideModuleToComponent(UserModule, () => {
+            cnt++;
+
+            return null;
+          });
+
+          function App() {
+            return <MyComponent />;
+          }
+
+          await act(async () => render(<App />));
+
+          await waitFor(async () => {
+            expect(cnt).toBe(
+              // When strict mode is enabled react will automatically double mount the component
+              USE_REACT_STRICT_MODE ? 2 : 1
+            );
+          });
         });
 
-        cnt = 0;
+        it('should cause a re-render only on props change', async () => {
+          let cnt = 0;
 
-        rerender(<App value={2} />);
+          const MyComponent = React.memo(
+            provideModuleToComponent(UserModule, ({ value }: any) => {
+              cnt++;
+              return null;
+            })
+          );
 
-        await waitFor(() => {
-          // When strict mode is enabled react will automatically double mount the component
-          expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
+          function App({ value }: { value: number }) {
+            return <MyComponent value={value} />;
+          }
+
+          const { rerender } = render(<App value={1} />);
+
+          await waitFor(() => {
+            expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
+          });
+
+          cnt = 0;
+
+          rerender(<App value={2} />);
+
+          await waitFor(() => {
+            // When strict mode is enabled react will automatically double mount the component
+            expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
+          });
         });
       });
     });
@@ -643,68 +647,123 @@ describe.each([
     });
 
     describe('Component Life Cycle', () => {
-      it('should dispose the contextualized module on unmount', async () => {
-        let isDisposed = false;
+      describe('ProvideModule', () => {
+        it('should dispose the contextualized module on unmount', async () => {
+          let isDisposed = false;
 
-        const m = new ComponentProviderModule({
-          identifier: Symbol('DISPOSE_MODULE_ON_UNMOUNT'),
-          onDispose: async () => {
-            isDisposed = true;
-          },
-        }).toNaked();
+          const m = new ComponentProviderModule({
+            identifier: Symbol('DISPOSE_MODULE_ON_UNMOUNT'),
+            onDispose: async () => {
+              isDisposed = true;
+            },
+          }).toNaked();
 
-        const { unmount } = await act(async () =>
-          render(
-            <ProvideModule module={m}>
-              <></>
-            </ProvideModule>
-          )
-        );
+          const { unmount } = await act(async () =>
+            render(
+              <ProvideModule module={m}>
+                <></>
+              </ProvideModule>
+            )
+          );
 
-        unmount();
+          unmount();
 
-        await waitFor(async () => {
-          expect(isDisposed).toBe(true);
+          await waitFor(async () => {
+            expect(isDisposed).toBe(true);
+          });
+        });
+
+        it('should dispose the contextualized module on unmount and create a new on on mount', async () => {
+          let isDisposed = false;
+
+          const m = new ComponentProviderModule({
+            identifier: Symbol('DISPOSE_MODULE_ON_UNMOUNT'),
+            onReady: async () => {
+              isDisposed = false;
+            },
+            onDispose: async () => {
+              isDisposed = true;
+            },
+          }).toNaked();
+
+          const { unmount } = await act(async () =>
+            render(
+              <ProvideModule module={m}>
+                <></>
+              </ProvideModule>
+            )
+          );
+
+          unmount();
+
+          await waitFor(async () => {
+            expect(isDisposed).toBe(true);
+          });
+
+          await act(async () =>
+            render(
+              <ProvideModule module={m}>
+                <></>
+              </ProvideModule>
+            )
+          );
+
+          await waitFor(async () => {
+            expect(isDisposed).toBe(false);
+          });
         });
       });
 
-      it('should dispose the contextualized module on unmount and create a new on on mount', async () => {
-        let isDisposed = false;
+      describe('provideModuleToComponent', () => {
+        it('should dispose the contextualized module on unmount', async () => {
+          let isDisposed = false;
 
-        const m = new ComponentProviderModule({
-          identifier: Symbol('DISPOSE_MODULE_ON_UNMOUNT'),
-          onReady: async () => {
-            isDisposed = false;
-          },
-          onDispose: async () => {
-            isDisposed = true;
-          },
-        }).toNaked();
+          const m = new ComponentProviderModule({
+            identifier: Symbol('DISPOSE_MODULE_ON_UNMOUNT'),
+            onDispose: async () => {
+              isDisposed = true;
+            },
+          }).toNaked();
 
-        const { unmount } = await act(async () =>
-          render(
-            <ProvideModule module={m}>
-              <></>
-            </ProvideModule>
-          )
-        );
+          const C = provideModuleToComponent(m, () => null);
 
-        unmount();
+          const { unmount } = await act(async () => render(<C />));
 
-        await waitFor(async () => {
-          expect(isDisposed).toBe(true);
+          unmount();
+
+          await waitFor(async () => {
+            expect(isDisposed).toBe(true);
+          });
         });
 
-        await act(async () =>
-          render(
-            <ProvideModule module={m}>
-              <></>
-            </ProvideModule>
-          )
-        );
+        it('should dispose the contextualized module on unmount and create a new on on mount', async () => {
+          let isDisposed = false;
 
-        await waitFor(async () => {
-          expect(isDisposed).toBe(false);
+          const m = new ComponentProviderModule({
+            identifier: Symbol('DISPOSE_MODULE_ON_UNMOUNT'),
+            onReady: async () => {
+              isDisposed = false;
+            },
+            onDispose: async () => {
+              isDisposed = true;
+            },
+          }).toNaked();
+
+          const C = provideModuleToComponent(m, () => null);
+
+          const { unmount } = await act(async () => render(<C />));
+
+          unmount();
+
+          await waitFor(async () => {
+            expect(isDisposed).toBe(true);
+          });
+
+          await act(async () => render(<C />));
+
+          await waitFor(async () => {
+            expect(isDisposed).toBe(false);
+          });
         });
       });
     });
