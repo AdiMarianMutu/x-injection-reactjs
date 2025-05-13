@@ -1,5 +1,5 @@
-import { XInjectionProviderModuleError } from '@adimm/x-injection';
+import { InjectionProviderModuleError } from '@adimm/x-injection';
 
-export class InjectionHookFactoryError extends XInjectionProviderModuleError {
+export class InjectionHookFactoryError extends InjectionProviderModuleError {
   override name = InjectionHookFactoryError.name;
 }
