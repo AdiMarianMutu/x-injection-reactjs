@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import { forwardPropsWithModule, useContextualizedModule } from '../../helpers';
 import type { IComponentProviderModule } from '../../types';
@@ -36,10 +36,14 @@ export function ProvideModule({ module, children }: ProvideModuleFunctionParams)
   /* istanbul ignore next */
   const componentProps = (children.props ?? {}) as any;
   const moduleCtx = useContextualizedModule(module, componentProps.module);
+  const component = useMemo(
+    () => React.cloneElement(children, forwardPropsWithModule(children, componentProps, moduleCtx)),
+    [componentProps, moduleCtx]
+  );
 
   return (
     <REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT.Provider value={moduleCtx}>
-      {React.cloneElement(children, forwardPropsWithModule(children, componentProps, moduleCtx))}
+      {component}
     </REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT.Provider>
   );
 }

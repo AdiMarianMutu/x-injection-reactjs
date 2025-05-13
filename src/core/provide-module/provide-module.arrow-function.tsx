@@ -1,6 +1,10 @@
+import React from 'react';
+
 import { forwardPropsWithModule, useContextualizedModule } from '../../helpers';
 import type { IComponentProviderModule, PropsWithModule } from '../../types';
 import { REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT } from '../react-context';
+
+const ComponentRenderer = React.memo(_ComponentRenderer);
 
 /**
  * Can be used to easily provide a {@link module} to any component.
@@ -38,13 +42,13 @@ export function provideModuleToComponent<
 
     return (
       <REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT.Provider value={moduleCtx}>
-        <ComponentRenderer module={moduleCtx} componentProps={componentProps} component={component} />
+        <ComponentRenderer module={moduleCtx} componentProps={componentProps} component={component as any} />
       </REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT.Provider>
     );
   }) as any;
 }
 
-function ComponentRenderer<P extends Record<string, any>>({
+function _ComponentRenderer<P extends Record<string, any>>({
   module,
   component,
   componentProps,

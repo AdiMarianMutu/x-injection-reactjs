@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 
 import { Injectable, InjectionScope } from '@adimm/x-injection';
 import { render as _render, act, fireEvent, screen, waitFor } from '@testing-library/react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   ComponentProviderModule,
@@ -79,6 +79,122 @@ describe.each([
 
         await waitFor(async () => {
           expect(await screen.findByTestId(TEST_ID)).toHaveTextContent(`Hello ${user.firstName} ${user.lastName}`);
+        });
+      });
+    });
+
+    describe('Performance', () => {
+      it('using `ProvideModule` should not cause an immediate re-render', async () => {
+        let cnt = 0;
+
+        function MyComponent() {
+          cnt++;
+
+          return null;
+        }
+
+        function App() {
+          return (
+            <ProvideModule module={UserModule}>
+              <MyComponent />
+            </ProvideModule>
+          );
+        }
+
+        await act(async () => render(<App />));
+
+        await waitFor(async () => {
+          expect(cnt).toBe(
+            // When strict mode is enabled react will automatically double mount the component
+            USE_REACT_STRICT_MODE ? 2 : 1
+          );
+        });
+      });
+
+      it('using `provideModuleToComponent` should not cause an immediate re-render', async () => {
+        let cnt = 0;
+
+        const MyComponent = provideModuleToComponent(UserModule, () => {
+          cnt++;
+
+          return null;
+        });
+
+        function App() {
+          return <MyComponent />;
+        }
+
+        await act(async () => render(<App />));
+
+        await waitFor(async () => {
+          expect(cnt).toBe(
+            // When strict mode is enabled react will automatically double mount the component
+            USE_REACT_STRICT_MODE ? 2 : 1
+          );
+        });
+      });
+
+      it('using `ProvideModule` should cause a re-render only on props change', async () => {
+        let cnt = 0;
+
+        function _MyComponent({ value }: any) {
+          cnt++;
+          return null;
+        }
+
+        const MyComponent = React.memo(_MyComponent);
+
+        function App({ value }: any) {
+          return (
+            <ProvideModule module={UserModule}>
+              <MyComponent value={value} />
+            </ProvideModule>
+          );
+        }
+
+        const { rerender } = render(<App value={1} />);
+
+        await waitFor(() => {
+          expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
+        });
+
+        cnt = 0;
+
+        rerender(<App value={2} />);
+
+        await waitFor(() => {
+          // When strict mode is enabled react will automatically double mount the component
+          expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
+        });
+      });
+
+      it('using `provideModuleToComponent` should cause a re-render only on props change', async () => {
+        let cnt = 0;
+
+        const MyComponent = React.memo(
+          provideModuleToComponent(UserModule, ({ value }: any) => {
+            cnt++;
+            return null;
+          })
+        );
+
+        function App({ value }: { value: number }) {
+          return <MyComponent value={value} />;
+        }
+
+        const { rerender } = render(<App value={1} />);
+
+        await waitFor(() => {
+          expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
+        });
+
+        cnt = 0;
+
+        rerender(<App value={2} />);
+
+        await waitFor(() => {
+          // When strict mode is enabled react will automatically double mount the component
+          expect(cnt).toBe(USE_REACT_STRICT_MODE ? 2 : 1);
         });
       });
     });
