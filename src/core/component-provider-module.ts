@@ -40,6 +40,7 @@ export class ComponentProviderModule extends ProviderModule implements IComponen
     const clonedModule = new ComponentProviderModule(
       ProviderModuleHelpers.buildInternalConstructorParams({
         isAppModule: this.isAppModule,
+        markAsGlobal: this.isMarkedAsGlobal,
         identifier: Symbol(this.identifier.description!.replace('Component', '')),
         defaultScope: this.defaultScope.native,
         dynamicExports: this.dynamicExports,
