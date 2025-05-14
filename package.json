@@ -1,7 +1,7 @@
 {
   "name": "@adimm/x-injection-reactjs",
   "description": "ReactJS integration of the `xInjection` library.",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "author": "Adi-Marian Mutu",
   "homepage": "https://github.com/AdiMarianMutu/x-injection-reactjs#readme",
   "bugs": "https://github.com/AdiMarianMutu/x-injection-reactjs/issues",
