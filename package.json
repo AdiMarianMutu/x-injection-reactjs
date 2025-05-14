@@ -32,6 +32,7 @@
     "start:watch": "tsup src/index.ts --config ./config/tsup.config.ts --watch --onSuccess 'node dist/index.js'",
     "test": "jest --config ./config/jest.config.ts",
     "test:coverage": "npm run test && http-server ./coverage/lcov-report --cors -p 8081 -c-1",
+    "update-base-lib": "npm i @adimm/x-injection@latest & git add package.json package-lock.json & git commit -m \"chore: install latest version of the `xInjection` base lib\"",
     "v:bump-patch": "npm version patch -m \"chore: update lib patch version to %s\"",
     "v:bump-minor": "npm version minor -m \"chore: update lib minor version to %s\"",
     "v:bump-major": "npm version major -m \"chore: update lib major version %s\""
