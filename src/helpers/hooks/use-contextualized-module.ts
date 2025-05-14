@@ -8,7 +8,11 @@ export function useContextualizedModule(
   forwardedModule?: IComponentProviderModule
 ): IComponentProviderModule {
   const ctxModule = useMemo(() => {
-    return (forwardedModule ?? originalModule).toNaked()._createContextualizedComponentInstance();
+    const module = (forwardedModule ?? originalModule).toNaked();
+
+    if (module.isMarkedAsGlobal) return module;
+
+    return module._createContextualizedComponentInstance();
   }, [originalModule, forwardedModule]);
 
   useEffectOnce(() => {

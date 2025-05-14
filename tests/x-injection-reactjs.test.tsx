@@ -16,7 +16,7 @@ import {
   type IComponentProviderModule,
 } from '../src';
 import { InjectionHookFactoryError } from '../src/errors';
-import { GlobalService, RandomModule, RandomService, UserModule, UserService } from './setup';
+import { GlobalModule, GlobalService, RandomModule, RandomService, UserModule, UserService } from './setup';
 
 // [!!! IMPORTANT !!!]
 //
@@ -663,6 +663,24 @@ describe.each([
     });
 
     describe('Component Life Cycle', () => {
+      it('should NOT create a `Contextualized Module` when (the module) is marked as global', async () => {
+        const GlobalModuleClone = GlobalModule.clone();
+        const serviceFromGlobalModule = GlobalModuleClone.get(GlobalService);
+        let serviceFromComponent: GlobalService;
+
+        const C = provideModuleToComponent(GlobalModuleClone, () => {
+          serviceFromComponent = useInject(GlobalService);
+
+          return null;
+        });
+
+        await act(async () => render(<C />));
+
+        await waitFor(async () => {
+          expect(serviceFromComponent).toBe(serviceFromGlobalModule);
+        });
+      });
+
       describe('ProvideModule', () => {
         it('should dispose the contextualized module on unmount', async () => {
           let isDisposed = false;

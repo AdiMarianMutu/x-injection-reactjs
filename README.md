@@ -26,8 +26,6 @@ xInjection ReactJS <a href="https://www.npmjs.com/package/@adimm/x-injection-rea
   - [Hook Injection](#hook-injection)
 - [Examples](#examples)
   - [Composable components](#composable-components)
-- [Common Mistakes](#common-mistakes)
-  - [Global ComponentModule](#global-componentmodule)
 - [Unit Tests](#unit-tests)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
@@ -468,44 +466,6 @@ export const Autocomplete = provideModuleToComponent(
 This should cover the fundamentals of how you can build a scalable UI by using the `xInjection` Dependency Injection 😊
 
 > **Note:** _Keep in mind that both library ([xInjection](https://www.npmjs.com/package/@adimm/x-injection) & [xInjection ReactJS](https://www.npmjs.com/package/@adimm/x-injection-reactjs)) are still young and being developed, therefore the internals and public API may change in the near future._
-
-## Common Mistakes
-
-### Global ComponentModule
-
-When creating a _global_ component module, you may do a subtle mistake which may lead to an unexpected "bug", to better understand see the below example:
-
-```tsx
-const ModalModule = new ComponentProviderModule({
-  identifier: Symbol('ModalModule'),
-  markAsGlobal: true,
-  provides: [ModalService],
-  exports: [ModalService],
-});
-
-const ModalComponent = provideModuleToComponent(ModalModule, () => {
-  const modalService = useInject(ModalService);
-});
-```
-
-The mistake here is wrapping the `ModalComponent` within a module provider _(either the `provideModuleToComponent` HOF or the `ProvideModule` HOC)_, because when you'll use the `useInject` hook, it'll resolve from the _contextualized_ `ModalModule` rather than from the `AppModule`, therefore the resolved `modalService` within the `ModalComponent` will not be the same instance as the one which has been resolved directly from the `AppModule`!
-
-The correct code:
-
-```tsx
-const ModalModule = new ComponentProviderModule({
-  identifier: Symbol('ModalModule'),
-  markAsGlobal: true,
-  provides: [ModalService],
-  exports: [ModalService],
-});
-
-const ModalComponent = () => {
-  const modalService = useInject(ModalService);
-};
-```
-
-Now the `useInject` hook will correctly resolve the `ModalService` from the `AppModule` instead.
 
 ## Unit Tests
 
