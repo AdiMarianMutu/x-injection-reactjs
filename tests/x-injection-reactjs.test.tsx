@@ -43,6 +43,22 @@ describe.each([
       expect(RandomModule.get(GlobalService) instanceof GlobalService).toBe(true);
     });
 
+    it('should correctly resolve from the `AppModule` from within a component NOT wrapped into a `ProviderModule`', async () => {
+      let serviceFromComponent: GlobalService;
+
+      const C = () => {
+        serviceFromComponent = useInject(GlobalService);
+
+        return null;
+      };
+
+      await act(async () => render(<C />));
+
+      await waitFor(async () => {
+        expect(serviceFromComponent).toBe(RandomModule.get(GlobalService));
+      });
+    });
+
     describe('Module Provider', () => {
       const TEST_ID = 'module-provider';
 
