@@ -1,7 +1,7 @@
 <h1 align="center">
-xInjection ReactJS <a href="https://www.npmjs.com/package/@adimm/x-injection-reactjs" target="__blank" alt="Release Version"><img src="https://badgen.net/npm/v/@adimm/x-injection-reactjs"></a>
-<img src="https://badgen.net/npm/license/@adimm/x-injection-reactjs" alt="License">
-<a href="https://app.codecov.io/gh/AdiMarianMutu/x-injection-reactjs" target="__blank" alt="Release Version"><img src="https://badgen.net/codecov/c/github/AdiMarianMutu/x-injection-reactjs"></a>
+xInjection ReactJS <a href="https://www.npmjs.com/package/@adimm/x-injection-reactjs" target="__blank"><img src="https://badgen.net/npm/v/@adimm/x-injection-reactjs"></a>
+<img src="https://badgen.net/npm/license/@adimm/x-injection-reactjs">
+<a href="https://app.codecov.io/gh/AdiMarianMutu/x-injection-reactjs" target="__blank"><img src="https://badgen.net/codecov/c/github/AdiMarianMutu/x-injection-reactjs"></a>
 </h1>
 
 <p align="center">
@@ -9,7 +9,7 @@ xInjection ReactJS <a href="https://www.npmjs.com/package/@adimm/x-injection-rea
 <a href="https://github.com/AdiMarianMutu/x-injection-reactjs/actions/workflows/publish.yml" target="__blank"><img src="https://github.com/AdiMarianMutu/x-injection-reactjs/actions/workflows/publish.yml/badge.svg"></a>
 <br>
 <img src="https://badgen.net/bundlephobia/minzip/@adimm/x-injection-reactjs">
-<a href="https://www.npmjs.com/package/@adimm/x-injection-reactjs" target="__blank" alt="Monthly Downloads"><img src="https://badgen.net/npm/dm/@adimm/x-injection-reactjs"></a>
+<a href="https://www.npmjs.com/package/@adimm/x-injection-reactjs" target="__blank"><img src="https://badgen.net/npm/dm/@adimm/x-injection-reactjs"></a>
 </p>
 
 ## Table of Contents
