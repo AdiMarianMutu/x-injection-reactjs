@@ -38,7 +38,7 @@
     "v:bump-major": "npm version major -m \"chore: update lib major version %s\""
   },
   "dependencies": {
-    "@adimm/x-injection": "^0.6.5",
+    "@adimm/x-injection": "^0.7.0",
     "react": ">=18.0.0"
   },
   "devDependencies": {
