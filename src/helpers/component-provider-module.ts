@@ -1,7 +1,7 @@
-import { isFunction, type IProviderModule } from '@adimm/x-injection';
+import { isFunction } from '@adimm/x-injection';
 
 import type { ReactElementWithProviderModule } from '../core';
-import type { IComponentProviderModule, IComponentProviderModuleNaked, PropsWithModule } from '../types';
+import type { IComponentProviderModule, PropsWithModule } from '../types';
 
 export namespace ComponentProviderModuleHelpers {
   export function forwardPropsWithModule<P extends Record<string, any>>(

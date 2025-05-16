@@ -468,6 +468,140 @@ describe.each([
       });
     });
 
+    describe('Imports scope', () => {
+      it('should reference to the same children (component) module (if singleton) when `contextualizeImports` is `false`', async () => {
+        const userServicesPushedFromComponents: UserService[] = [];
+
+        @Injectable()
+        class BaseService {
+          constructor(public readonly userService: UserService) {
+            this.userService.firstName = 'Base FirstName';
+            this.userService.lastName = 'Base LastName';
+          }
+        }
+
+        const Base = new ComponentProviderModule({
+          identifier: Symbol('Base'),
+          contextualizeImports: false,
+          imports: [UserModule],
+          providers: [BaseService],
+        });
+
+        const Children = provideModuleToComponent<{ testId: string }>(UserModule, ({ testId }) => {
+          const service = useInject(UserService);
+
+          userServicesPushedFromComponents.push(service);
+
+          return (
+            <span data-testid={testId}>
+              {service.firstName} {service.lastName}
+            </span>
+          );
+        });
+
+        const Parent = provideModuleToComponent<{ testId: string; firstName: string; lastName: string }>(
+          Base,
+          ({ testId, firstName, lastName, module }) => {
+            const service = useInject(BaseService);
+
+            service.userService.firstName = firstName;
+            service.userService.lastName = lastName;
+
+            return <Children testId={testId} module={module} />;
+          }
+        );
+
+        await act(async () => {
+          render(
+            <>
+              <Parent testId="0" firstName="A" lastName="B" />
+              <Parent testId="1" firstName="C" lastName="D" />
+            </>
+          );
+        });
+
+        await waitFor(async () => {
+          // At render time this should still show the correct values
+          // but the underlying `UserService` should have its `firstName` and `lastName` properties
+          // overriden by the last rendered `Parent` component
+          expect(await screen.findByTestId('0')).toHaveTextContent('A B');
+          expect(await screen.findByTestId('1')).toHaveTextContent('C D');
+
+          // Here we should see that the `Children` component was actually using
+          // the service from its original module. (Which happens to be a singleton)
+          expect(userServicesPushedFromComponents[0]).toBe(
+            userServicesPushedFromComponents[!USE_REACT_STRICT_MODE ? 1 : 2]
+          );
+        });
+      });
+
+      it('should correctly NOT reference to the same children (component) module (if singleton) when `contextualizeImports` is `true`', async () => {
+        const userServicesPushedFromComponents: UserService[] = [];
+
+        @Injectable()
+        class BaseService {
+          constructor(public readonly userService: UserService) {
+            this.userService.firstName = 'Base FirstName';
+            this.userService.lastName = 'Base LastName';
+          }
+        }
+
+        const Base = new ComponentProviderModule({
+          identifier: Symbol('Base'),
+          contextualizeImports: true, // True by default
+          imports: [UserModule],
+          providers: [BaseService],
+        });
+
+        const Children = provideModuleToComponent<{ testId: string }>(UserModule, ({ testId }) => {
+          const service = useInject(UserService);
+
+          userServicesPushedFromComponents.push(service);
+
+          return (
+            <span data-testid={testId}>
+              {service.firstName} {service.lastName}
+            </span>
+          );
+        });
+
+        const Parent = provideModuleToComponent<{ testId: string; firstName: string; lastName: string }>(
+          Base,
+          ({ testId, firstName, lastName, module }) => {
+            const service = useInject(BaseService);
+
+            service.userService.firstName = firstName;
+            service.userService.lastName = lastName;
+
+            return <Children testId={testId} module={module} />;
+          }
+        );
+
+        await act(async () => {
+          render(
+            <>
+              <Parent testId="0" firstName="A" lastName="B" />
+              <Parent testId="1" firstName="C" lastName="D" />
+            </>
+          );
+        });
+
+        await waitFor(async () => {
+          // At render time this should still show the correct values
+          // but the underlying `UserService` should have its `firstName` and `lastName` properties
+          // overriden by the last rendered `Parent` component
+          expect(await screen.findByTestId('0')).toHaveTextContent('A B');
+          expect(await screen.findByTestId('1')).toHaveTextContent('C D');
+
+          // Here we shoudl see that the `Children` component was actually using
+          // the service from its original module. (Which happens to be a singleton)
+          expect(userServicesPushedFromComponents[0]).not.toBe(
+            userServicesPushedFromComponents[!USE_REACT_STRICT_MODE ? 1 : 2]
+          );
+        });
+      });
+    });
+
     describe('Parent inheritance', () => {
       it('AutoComplete -> Inputbox & (Dropdown -> ListView)', async () => {
         const dropdownNumberOfItems = 10;
@@ -664,7 +798,7 @@ describe.each([
 
     describe('Component Life Cycle', () => {
       it('should NOT create a `Contextualized Module` when (the module) is marked as global', async () => {
-        const GlobalModuleClone = GlobalModule.clone();
+        const GlobalModuleClone = GlobalModule.clone(); // Using clone to avoid disposing the `GlobalModule`
         const serviceFromGlobalModule = GlobalModuleClone.get(GlobalService);
         let serviceFromComponent: GlobalService;
 
@@ -678,6 +812,7 @@ describe.each([
 
         await waitFor(async () => {
           expect(serviceFromComponent).toBe(serviceFromGlobalModule);
+          // expect(serviceFromComponent).toBe(AppModule.get(GlobalService)); // This would NOT fail if `.clone()` was not used.
         });
       });
 
