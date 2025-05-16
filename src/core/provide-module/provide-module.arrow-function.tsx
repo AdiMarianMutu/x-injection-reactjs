@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { forwardPropsWithModule, useContextualizedModule } from '../../helpers';
+import { ComponentProviderModuleHelpers, useContextualizedModule } from '../../helpers';
 import type { IComponentProviderModule, PropsWithModule } from '../../types';
 import { REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT } from '../react-context';
 
@@ -57,7 +57,7 @@ function _ComponentRenderer<P extends Record<string, any>>({
   component: ReactElementWithProviderModule<P>;
   componentProps: P;
 }) {
-  return <>{component(forwardPropsWithModule(component, componentProps, module))}</>;
+  return <>{component(ComponentProviderModuleHelpers.forwardPropsWithModule(component, componentProps, module))}</>;
 }
 
 export type ReactElementWithProviderModule<P extends Record<string, any>> = (p: PropsWithModule<P>) => React.ReactNode;

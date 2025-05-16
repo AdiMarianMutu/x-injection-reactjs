@@ -1,2 +1,2 @@
 export * from './hooks';
-export * from './forward-props-with-module';
+export * from './component-provider-module';
