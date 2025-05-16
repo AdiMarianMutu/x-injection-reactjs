@@ -587,14 +587,9 @@ describe.each([
         });
 
         await waitFor(async () => {
-          // At render time this should still show the correct values
-          // but the underlying `UserService` should have its `firstName` and `lastName` properties
-          // overriden by the last rendered `Parent` component
           expect(await screen.findByTestId('0')).toHaveTextContent('A B');
           expect(await screen.findByTestId('1')).toHaveTextContent('C D');
 
-          // Here we shoudl see that the `Children` component was actually using
-          // the service from its original module. (Which happens to be a singleton)
           expect(userServicesPushedFromComponents[0]).not.toBe(
             userServicesPushedFromComponents[!USE_REACT_STRICT_MODE ? 1 : 2]
           );
