@@ -16,9 +16,9 @@ const ComponentRenderer = React.memo(_ComponentRenderer);
  *   lastName: string;
  * }
  *
- * export const MyComponent = provideModuleToComponent(
+ * export const MyComponent = provideModuleToComponent<MyComponentProps>(
  *   MyComponentModule,
- *   ({ firstName, lastName }: MyComponentProps) => {
+ *   ({ firstName, lastName }) => {
  *     const service = useInject(MyComponentService);
  *
  *     return <h1>Hello {service.computeUserName(firstName, lastName)}!</h1>

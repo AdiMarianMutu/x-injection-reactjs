@@ -120,7 +120,7 @@ If you prefer to use the `const Component = () => {}` syntax, then you must use 
 
 ```tsx
 // The UserInfo component will correctly infer the interface of `UserInfoProps` automatically!
-export const UserInfo = provideModuleToComponent(UserComponentModule, ({ firstName, lastName }: UserInfoProps) => {
+export const UserInfo = provideModuleToComponent<UserInfoProps>(UserComponentModule, ({ firstName, lastName }) => {
   const userService = useInject(UserService);
 
   userService.firstName = firstName;
@@ -263,7 +263,7 @@ export interface InputboxProps {
   initialValue: string;
 }
 
-export const Inputbox = provideModuleToComponent(InputboxModule, ({ initialValue }: InputboxProps) => {
+export const Inputbox = provideModuleToComponent<InputboxProps>(InputboxModule, ({ initialValue }) => {
   const service = useInject(InputboxService);
   const [, setCurrentValue] = useState(initialValue);
   service.setStateValue = setCurrentValue;
@@ -304,7 +304,7 @@ export interface ListviewProps {
   items: any[];
 }
 
-export const Listview = provideModuleToComponent(ListviewModule, ({ items }: ListviewProps) => {
+export const Listview = provideModuleToComponent<ListviewProps>(ListviewModule, ({ items }) => {
   const service = useInject(ListviewService);
 
   /* Remaining fancy implementation */
@@ -362,7 +362,7 @@ export interface DropdownProps {
   initialSelectedValue: number;
 }
 
-export const Dropdown = provideModuleToComponent(
+export const Dropdown = provideModuleToComponent<DropdownProps>(
   ListviewModule,
   ({
     listviewProps,
@@ -370,7 +370,7 @@ export const Dropdown = provideModuleToComponent(
     // Here it is important that we get access to the contextualized module
     // so we can forward it to the `Listview` component!
     module,
-  }: DropdownProps) => {
+  }) => {
     const service = useInject(DropdownService);
 
     /* Remaining fancy implementation */
@@ -437,14 +437,14 @@ export interface AutocompleteProps {
   currentText: string;
 }
 
-export const Autocomplete = provideModuleToComponent(
+export const Autocomplete = provideModuleToComponent<AutocompleteProps>(
   AutocompleteModule,
   ({
     dropdownProps,
     currentText,
 
     module,
-  }: AutocompleteProps) => {
+  }) => {
     const service = useInject(AutocompleteService);
 
     console.log(service.dropdownService.listviewService.items);
