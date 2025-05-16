@@ -15,5 +15,5 @@ export interface IComponentProviderModule extends IProviderModule {
    *
    * _eg: When changing page, removable components and so on._
    */
-  dispose(): void;
+  dispose(): Promise<void>;
 }

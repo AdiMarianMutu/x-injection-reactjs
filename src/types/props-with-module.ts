@@ -1,4 +1,4 @@
-import type { IComponentProviderModule } from './component-provider-module.interface';
+import type { IComponentProviderModule } from './component-provider-module';
 
 export type PropsWithModule<P extends Record<string, any>> = P & {
   /**
