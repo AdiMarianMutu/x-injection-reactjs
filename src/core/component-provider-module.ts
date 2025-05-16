@@ -2,7 +2,7 @@ import {
   InjectionScope,
   ProviderModule,
   ProviderModuleHelpers,
-  type CloneParams,
+  ProviderModuleOptionsInternal,
   type IProviderModuleNaked,
   type ProviderModuleOptions,
 } from '@adimm/x-injection';
@@ -30,12 +30,8 @@ export class ComponentProviderModule extends ProviderModule implements IComponen
   }
 
   /* istanbul ignore next */
-  override clone(options?: CloneParams): IComponentProviderModule {
-    let providers = [...this.providers];
-
-    if (options?.providersMap) {
-      providers = providers.map((provider) => options.providersMap!(provider, this));
-    }
+  override clone(options?: Partial<ProviderModuleOptions>): IComponentProviderModule {
+    const _options = options as ProviderModuleOptionsInternal;
 
     const clonedModule = new ComponentProviderModule(
       ProviderModuleHelpers.buildInternalConstructorParams({
@@ -46,10 +42,11 @@ export class ComponentProviderModule extends ProviderModule implements IComponen
         dynamicExports: this.dynamicExports,
         onReady: this.onReady,
         onDispose: this.onDispose,
-        importedProvidersMap: options?.importedProvidersMap,
+        importedProvidersMap: this.importedProvidersMap,
         imports: [...this.imports],
-        providers,
+        providers: [...this.providers],
         exports: [...this.exports],
+        ..._options,
       })
     );
 
