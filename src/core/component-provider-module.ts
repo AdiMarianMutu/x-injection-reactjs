@@ -95,11 +95,6 @@ export class ComponentProviderModule extends ProviderModule implements IComponen
     return clonedModule;
   }
 
-  /* istanbul ignore next */
-  override async dispose(): Promise<void> {
-    await super.dispose();
-  }
-
   //#region IComponentProviderModuleNaked methods
 
   /**
