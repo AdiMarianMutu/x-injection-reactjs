@@ -38,7 +38,7 @@ export function provideModuleToComponent<
   C extends ReactElementWithProviderModule<P> = ReactElementWithProviderModule<P>,
 >(module: IComponentProviderModule, component: ReactElementWithProviderModule<P>): C {
   return ((componentProps: PropsWithModule<P>) => {
-    const moduleCtx = useContextualizedModule(module, componentProps.module);
+    const moduleCtx = useContextualizedModule(module, componentProps);
 
     return (
       <REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT.Provider value={moduleCtx}>

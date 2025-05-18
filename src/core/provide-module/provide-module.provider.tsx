@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 
 import { ComponentProviderModuleHelpers, useContextualizedModule } from '../../helpers';
-import type { IComponentProviderModule } from '../../types';
+import type { IComponentProviderModule, PropsWithModule } from '../../types';
 import { REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT } from '../react-context';
 
 /**
@@ -34,8 +34,8 @@ import { REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT } from '../react-context';
  */
 export function ProvideModule({ module, children }: ProvideModuleFunctionParams) {
   /* istanbul ignore next */
-  const componentProps = (children.props ?? {}) as any;
-  const moduleCtx = useContextualizedModule(module, componentProps.module);
+  const componentProps = (children.props ?? {}) as PropsWithModule<object>;
+  const moduleCtx = useContextualizedModule(module, componentProps);
   const component = useMemo(
     () =>
       React.cloneElement(

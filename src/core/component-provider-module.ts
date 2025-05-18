@@ -91,6 +91,8 @@ export class ComponentProviderModule extends ProviderModule implements IComponen
 
     //@ts-expect-error Read-only method.
     clonedModule.initializedFromComponent = this.initializedFromComponent;
+    //@ts-expect-error Read-only method.
+    clonedModule.registeredBindingSideEffects = new Map(this.registeredBindingSideEffects);
 
     return clonedModule;
   }
@@ -110,7 +112,7 @@ export class ComponentProviderModule extends ProviderModule implements IComponen
     /* istanbul ignore next */
     //@ts-expect-error Read-only property
     ctxModule.identifier = Symbol(
-      `${parentIdentifier ? `[Parent:${parentIdentifier.description ?? 'Unknown'}]` : ''}Contextualized${ctxModule.identifier.description}`
+      `${parentIdentifier ? `[Importer:${parentIdentifier.description ?? 'Unknown'}]` : ''}Contextualized${ctxModule.identifier.description}`
     );
     ctxModule.initializedFromComponent = true;
 

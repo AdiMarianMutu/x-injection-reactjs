@@ -364,13 +364,7 @@ export interface DropdownProps {
 
 export const Dropdown = provideModuleToComponent<DropdownProps>(
   ListviewModule,
-  ({
-    listviewProps,
-    initialSelectedValue,
-    // Here it is important that we get access to the contextualized module
-    // so we can forward it to the `Listview` component!
-    module,
-  }) => {
+  ({ listviewProps, initialSelectedValue }) => {
     const service = useInject(DropdownService);
 
     /* Remaining fancy implementation */
@@ -379,9 +373,9 @@ export const Dropdown = provideModuleToComponent<DropdownProps>(
       <div className="fancy-dropdown">
         <span>{initialSelectedValue}</span>
 
-        {/* Here we forward the contextualized module which will be sent from the parent component consuming this component,
-        in our case, the `Autocomplete` component. */}
-        <Listview module={module} />
+        {/* Here we tell the `ListView` component to actually use the `ListviewService` instance we provide via the `useValue` property. */}
+        {/* Each `useInject(ListviewService)` used inside the `ListView` component will automatically resolve to `service.listviewService`. */}
+        <Listview {...listviewProps} inject={[{ provide: ListviewService, useValue: service.listviewService }]} />
       </div>
     );
   }
@@ -437,15 +431,10 @@ export interface AutocompleteProps {
   currentText: string;
 }
 
-export const Autocomplete = provideModuleToComponent<AutocompleteProps>(
-  AutocompleteModule,
-  ({
-    dropdownProps,
-    currentText,
-
-    module,
-  }) => {
+export const Autocomplete = provideModuleToComponent<AutocompleteProps>(AutocompleteModule, ({ inputboxProps, dropdownProps, currentText }) => {
     const service = useInject(AutocompleteService);
+
+    service.inputboxService.currentValue = currentText;
 
     console.log(service.dropdownService.listviewService.items);
     // Produces: [29, 9, 1969]
@@ -454,9 +443,9 @@ export const Autocomplete = provideModuleToComponent<AutocompleteProps>(
 
     return (
       <div className="fancy-autocomplete">
-        {/* Let's not forget to forward the module to both components we want to control */}
-        <Inputbox {...inputboxProps} module={module} >
-        <Dropdown {...dropdownProps} module={module} />
+        {/* Let's not forget to replace the injection providers of both components we want to control */}
+        <Inputbox {...inputboxProps} inject={[{ provide: InputboxService, useValue: service.inputboxService }]} >
+        <Dropdown {...dropdownProps} inject={[{ provide: DropdownService, useValue: service.dropdownService }]} />
       </div>
     );
   }

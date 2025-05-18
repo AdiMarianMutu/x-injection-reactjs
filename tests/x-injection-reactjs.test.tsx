@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 
-import { Injectable, InjectionScope } from '@adimm/x-injection';
-import { render as _render, act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { Injectable, InjectionProviderModuleError, InjectionScope } from '@adimm/x-injection';
+import { render as _render, act, fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
 import React, { useEffect, useState } from 'react';
 
 import {
@@ -13,9 +13,9 @@ import {
   provideModuleToComponent,
   useInject,
   useInjectMany,
-  type IComponentProviderModule,
 } from '../src';
 import { InjectionHookFactoryError } from '../src/errors';
+import { useContextualizedModule } from '../src/helpers';
 import { GlobalModule, GlobalService, RandomModule, RandomService, UserModule, UserService } from './setup';
 
 // [!!! IMPORTANT !!!]
@@ -535,7 +535,7 @@ describe.each([
         });
       });
 
-      it('should correctly NOT reference to the same children (component) module (if singleton) when `contextualizeImports` is `true`', async () => {
+      it('should correctly NOT reference the same children (component) module (if singleton) when `contextualizeImports` is `true`', async () => {
         const userServicesPushedFromComponents: UserService[] = [];
 
         @Injectable()
@@ -567,13 +567,13 @@ describe.each([
 
         const Parent = provideModuleToComponent<{ testId: string; firstName: string; lastName: string }>(
           Base,
-          ({ testId, firstName, lastName, module }) => {
+          ({ testId, firstName, lastName }) => {
             const service = useInject(BaseService);
 
             service.userService.firstName = firstName;
             service.userService.lastName = lastName;
 
-            return <Children testId={testId} module={module} />;
+            return <Children testId={testId} inject={[{ provide: UserService, useValue: service.userService }]} />;
           }
         );
 
@@ -598,6 +598,78 @@ describe.each([
     });
 
     describe('Parent inheritance', () => {
+      it('should throw an exception when using `inject` with a global module', async () => {
+        expect(() =>
+          renderHook(() =>
+            useContextualizedModule(
+              new ComponentProviderModule({ identifier: Symbol('InjectGlobalModuleError'), markAsGlobal: true }),
+              { inject: [] }
+            )
+          )
+        ).toThrow(InjectionProviderModuleError);
+      });
+
+      it('Form -> Inputbox & Inputbox', async () => {
+        @Injectable()
+        class InputboxService {
+          currentValue = '';
+        }
+
+        @Injectable()
+        class FormService {
+          constructor(
+            public readonly firstNameInputbox: InputboxService,
+            public readonly lastNameInputbox: InputboxService
+          ) {
+            this.firstNameInputbox.currentValue = 'A';
+            this.lastNameInputbox.currentValue = 'B';
+          }
+        }
+
+        const InputboxModule = new ComponentProviderModule({
+          identifier: Symbol('InputboxModule'),
+          defaultScope: InjectionScope.Transient,
+          providers: [InputboxService],
+          exports: [InputboxService],
+        });
+
+        const FormModule = new ComponentProviderModule({
+          identifier: Symbol('FormModule'),
+          imports: [InputboxModule],
+          providers: [FormService],
+        });
+
+        const Inputbox = provideModuleToComponent<{ testId: string }>(InputboxModule, ({ testId }) => {
+          const service = useInject(InputboxService);
+
+          return <span data-testid={testId}>{service.currentValue}</span>;
+        });
+
+        const Form = provideModuleToComponent(FormModule, () => {
+          const service = useInject(FormService);
+
+          return (
+            <>
+              <Inputbox
+                inject={[{ provide: InputboxService, useValue: service.firstNameInputbox }]}
+                testId="first-name"
+              />
+              <Inputbox
+                inject={[{ provide: InputboxService, useValue: service.lastNameInputbox }]}
+                testId="last-name"
+              />
+            </>
+          );
+        });
+
+        await act(async () => render(<Form />));
+
+        await waitFor(async () => {
+          expect(await screen.findByTestId('first-name')).toHaveTextContent('A');
+          expect(await screen.findByTestId('last-name')).toHaveTextContent('B');
+        });
+      });
+
       it('AutoComplete -> Inputbox & (Dropdown -> ListView)', async () => {
         const dropdownNumberOfItems = 10;
         const dropdownDefaultValue = 'Hello World!';
@@ -653,13 +725,15 @@ describe.each([
           exports: [ListViewModule, DropdownService],
         });
 
-        const DropdownComponent = ({ module }: { module?: IComponentProviderModule }) => {
+        const DropdownComponent = provideModuleToComponent(DropdownModule, () => {
+          const service = useInject(DropdownService);
+
           return (
             <div data-test="dropdown">
-              <ListViewComponent module={module} />
+              <ListViewComponent inject={[{ provide: ListViewService, useValue: service.listViewService }]} />
             </div>
           );
-        };
+        });
 
         //#endregion
 
@@ -676,26 +750,19 @@ describe.each([
           exports: [InputboxService],
         });
 
-        const InputboxComponent = provideModuleToComponent(
-          InputboxModule,
-          ({ defaultValue }: { defaultValue: string }) => {
-            const service = useInject(InputboxService);
+        const InputboxComponent = provideModuleToComponent(InputboxModule, () => {
+          const service = useInject(InputboxService);
 
-            useEffect(() => {
-              service.value = defaultValue;
-            }, []);
-
-            return (
-              <input
-                data-testid="inputbox"
-                value={service.value}
-                onChange={(e) => {
-                  service.value = e.currentTarget.value;
-                }}
-              />
-            );
-          }
-        );
+          return (
+            <input
+              data-testid="inputbox"
+              value={service.value}
+              onChange={(e) => {
+                service.value = e.currentTarget.value;
+              }}
+            />
+          );
+        });
 
         //#endregion
 
@@ -707,6 +774,7 @@ describe.each([
             readonly inputboxService: InputboxService,
             readonly dropdownService: DropdownService
           ) {
+            this.inputboxService.value = dropdownDefaultValue;
             this.dropdownService.listViewService.numberOfItems = dropdownNumberOfItems;
           }
         }
@@ -721,16 +789,14 @@ describe.each([
         const AutoCompleteComponent = provideModuleToComponent<{
           testId: string;
           serCb?: (ser: AutoCompleteService) => void;
-        }>(AutoCompleteModule, ({ module, testId, serCb }) => {
+        }>(AutoCompleteModule, ({ testId, serCb }) => {
           const service = useInject(AutoCompleteService);
           serCb?.(service);
 
           return (
             <div data-testid={testId}>
-              <InputboxComponent defaultValue={dropdownDefaultValue} module={module} />
-              <ProvideModule module={module!}>
-                <DropdownComponent />
-              </ProvideModule>
+              <InputboxComponent inject={[{ provide: InputboxService, useValue: service.inputboxService }]} />
+              <DropdownComponent inject={[{ provide: DropdownService, useValue: service.dropdownService }]} />
             </div>
           );
         });
@@ -742,6 +808,7 @@ describe.each([
         );
 
         await waitFor(async () => {
+          expect((await screen.findByTestId('inputbox')).getAttribute('value')).toBe(dropdownDefaultValue);
           expect(Number((await screen.findByTestId('list-view')).innerHTML)).toBe(dropdownNumberOfItems);
         });
 
