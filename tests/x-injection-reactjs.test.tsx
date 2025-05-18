@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 
 import { Injectable, InjectionProviderModuleError, InjectionScope } from '@adimm/x-injection';
 import { render as _render, act, fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 import {
   ComponentProviderModule,
