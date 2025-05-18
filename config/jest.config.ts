@@ -13,7 +13,7 @@ const config: Config = {
   notify: false,
   collectCoverage: true,
   coverageDirectory: './coverage',
-  collectCoverageFrom: ['./src/core/**/*.{ts,tsx}'],
+  collectCoverageFrom: ['./src/core/**/*.{ts,tsx}', './src/helpers/hooks/use-contextualized-module.ts'],
   coveragePathIgnorePatterns: ['index.ts'],
   coverageThreshold: {
     global: {
