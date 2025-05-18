@@ -465,6 +465,38 @@ describe.each([
             );
           });
         });
+
+        it('should successfully compose a custom hook with automatic access to the `ProvideModule.inject` prop', async () => {
+          @Injectable()
+          class TestService {
+            value = '';
+          }
+
+          const useTestHook = hookFactory({
+            use: ({ deps: [testService] }: HookWithDeps<void, [TestService]>) => {
+              return testService.value;
+            },
+            inject: [TestService],
+          });
+
+          const C = provideModuleToComponent(
+            new ComponentProviderModule({
+              identifier: Symbol('TestProvider'),
+              providers: [TestService],
+            }),
+            () => {
+              const value = useTestHook();
+
+              return <span data-testid="test">{value}</span>;
+            }
+          );
+
+          await act(async () => render(<C inject={[{ provide: TestService, useValue: { value: 'Hello World!' } }]} />));
+
+          await waitFor(async () => {
+            expect(await screen.findByTestId('test')).toHaveTextContent('Hello World!');
+          });
+        });
       });
     });
 
