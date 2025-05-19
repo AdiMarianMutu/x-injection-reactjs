@@ -212,6 +212,10 @@ export function UserInfo({ firstName, lastName }: UserInfoProps) {
 }
 ```
 
+> **Note:** _If your custom hook does not accept any parameter, you can provide `void` to the 1st generic type._
+>
+> e.g: `use: ({ deps: [userService] }: HookWithDeps<void, UserService>)`
+
 ## Examples
 
 ### Composable components
