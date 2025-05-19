@@ -95,7 +95,7 @@ export class UserService {
   lastName: string;
 
   generateFullName(): string {
-    return `${firstName} ${lastName}`;
+    return `${this.firstName} ${this.lastName}`;
   }
 }
 
