@@ -31,8 +31,6 @@ export class ComponentProviderModule extends ProviderModule implements IComponen
           ? options.imports
           : options.imports?.map((imp) => {
               const module = (typeof imp === 'function' ? imp() : imp) as IComponentProviderModuleNaked;
-              /* istanbul ignore next */
-              if (!contextualizeImports) return module;
 
               return () => {
                 const ctxModule = module._createContextualizedComponentInstance(identifier);
