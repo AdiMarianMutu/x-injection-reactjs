@@ -188,7 +188,7 @@ Having the above examples with the `UserService`, we'll create a custom `generat
 // and starting from the 2nd generic param you must provide the type of your dependencies.
 const useGenerateUserFullName = hookFactory({
   // The `use` property is where you write your hook implementation.
-  use: ({ firstName, lastName, deps: [userService] }: HookWithDeps<UserInfoProps, UserService>) => {
+  use: ({ firstName, lastName, deps: [userService] }: HookWithDeps<UserInfoProps, [UserService]>) => {
     userService.firstName = firstName;
     userService.lastName = lastName;
 
@@ -214,7 +214,7 @@ export function UserInfo({ firstName, lastName }: UserInfoProps) {
 
 > **Note:** _If your custom hook does not accept any parameter, you can provide `void` to the 1st generic type._
 >
-> e.g: `use: ({ deps: [userService] }: HookWithDeps<void, UserService>)`
+> e.g: `use: ({ deps: [userService] }: HookWithDeps<void, [UserService]>)`
 
 ## Examples
 
