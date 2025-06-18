@@ -1,13 +1,16 @@
+import type { IProviderModule, ModuleOrBlueprint } from '@adimm/x-injection';
 import React from 'react';
 
-import { ComponentProviderModuleHelpers, useContextualizedModule } from '../../helpers';
-import type { IComponentProviderModule, PropsWithModule } from '../../types';
-import { REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT } from '../react-context';
+import { ComponentProviderModuleHelpers, useMakeOrGetComponentModule } from '../helpers';
+import type { PropsWithModule } from '../types';
+import { REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT } from './react-context';
 
 const ComponentRenderer = React.memo(_ComponentRenderer);
 
 /**
- * Can be used to easily provide a {@link module} to any component.
+ * Can be used to easily provide a {@link module} to a component.
+ *
+ * **Note:** _An error will be thrown if a `global` module is provided._
  *
  * @example
  * ```tsx
@@ -30,15 +33,15 @@ const ComponentRenderer = React.memo(_ComponentRenderer);
  * }
  * ```
  *
- * @param module The {@link IComponentProviderModule | Module} which should be consumed by the {@link component}.
+ * @param module The {@link ModuleOrBlueprint} which should be consumed by the {@link component}.
  * @returns The provided {@link toComponent | Component}.
  */
 export function provideModuleToComponent<
   P extends Record<string, any>,
   C extends ReactElementWithProviderModule<P> = ReactElementWithProviderModule<P>,
->(module: IComponentProviderModule, component: ReactElementWithProviderModule<P>): C {
+>(module: ModuleOrBlueprint, component: ReactElementWithProviderModule<P>): C {
   return ((componentProps: PropsWithModule<P>) => {
-    const moduleCtx = useContextualizedModule(module, componentProps);
+    const moduleCtx = useMakeOrGetComponentModule(module, componentProps);
 
     return (
       <REACT_X_INJECTION_PROVIDER_MODULE_CONTEXT.Provider value={moduleCtx}>
@@ -53,7 +56,7 @@ function _ComponentRenderer<P extends Record<string, any>>({
   component,
   componentProps,
 }: {
-  module: IComponentProviderModule;
+  module: IProviderModule;
   component: ReactElementWithProviderModule<P>;
   componentProps: P;
 }) {

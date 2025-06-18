@@ -1,17 +1,15 @@
-import type { DependencyProvider } from '@adimm/x-injection';
-
-import type { IComponentProviderModule } from './component-provider-module';
+import type { DependencyProvider, ModuleOrBlueprint } from '@adimm/x-injection';
 
 export type PropsWithModule<P extends Record<string, any>> = P & {
   /**
-   * The {@link IComponentProviderModule | Module} which this component should consume.
+   * The {@link ModuleOrBlueprint} which this component should consume.
    *
    * **Note:** _Can be used to easily mock an entire module._
    *
    * example:
    * ```tsx
-   * const CarModule = new ComponentProviderMdule({
-   *   identifier: Symbol('CarModule'),
+   * const CarModuleBp = ProviderModule.blueprint({
+   *   id: 'CarModule',
    *   imports: [CarEngineModule, CarDashboardModule],
    *   providers: [CarService],
    *   exports: [CarService],
@@ -19,7 +17,7 @@ export type PropsWithModule<P extends Record<string, any>> = P & {
    *
    * const cbMock = jest.fn();
    *
-   * const CarModuleMocked = CarModule.clone({
+   * const CarModulBpeMocked = CarModuleBp.clone().updateDefinition({
    *   providers: [
    *     {
    *       provide: CarService, useValue: { startEngine: cbMock }
@@ -27,21 +25,18 @@ export type PropsWithModule<P extends Record<string, any>> = P & {
    *   ]
    * });
    *
-   * await act(async () => render(<CarComponent module={CarModuleMocked} />));
+   * await act(async () => render(<CarComponent module={CarModuleBpMocked} />));
    *
    * await waitFor(async () => {
    *   expect(cbMock).toHaveBeenCalled();
    * });
    * ```
    */
-  module?: IComponentProviderModule;
+  module?: ModuleOrBlueprint;
 
   /**
    * Can be used to control the dependencies consumed by this component.
    * This is useful when you want to provide an already resolved instance of a dependency down the component tree.
-   *
-   * **Note:** _It'll throw when attempting to provide the `inject` prop to a component using a module_
-   * _marked as global!_
    *
    * eg:
    * ```tsx

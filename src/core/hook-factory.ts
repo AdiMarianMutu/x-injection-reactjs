@@ -24,14 +24,12 @@ export function hookFactory<P extends HookParams, D extends any[], T>({
 }
 
 export interface HookFactoryParams<P extends HookParams, D extends any[], T> {
-  use: HookWithProviderModuleDependencies<P, D, T>;
+  use: (p: HookWithDeps<P, D>) => T;
   inject: ProviderToken[];
 }
 
-export type HookWithProviderModuleDependencies<P extends HookParams, D extends any[], T> = (p: HookWithDeps<P, D>) => T;
-
 export type HookWithDeps<P extends HookParams, D extends any[]> = P & {
-  /** Array containing the resolved dependencies from the component context. */
+  /** Array containing the resolved dependencies. */
   deps: D;
 };
 
