@@ -12,61 +12,53 @@
 <a href="https://www.npmjs.com/package/@adimm/x-injection-reactjs" target="__blank"><img src="https://badgen.net/npm/dm/@adimm/x-injection-reactjs"></a>
 </p>
 
+# xInjection for React
+
+Powerful dependency injection for React components using a modular architecture. Build scalable React applications with clean separation of concerns.
+
 ## Table of Contents
 
-- [Table of Contents](#table-of-contents)
-- [Overview](#overview)
-- [Installation](#installation)
-  - [TypeScript Configuration](#typescript-configuration)
-- [Getting Started](#getting-started)
+- [xInjection for React](#xinjection-for-react)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Installation](#installation)
   - [Quick Start](#quick-start)
-  - [Conventions](#conventions)
-  - [Component Module](#component-module)
-  - [Component Service](#component-service)
-  - [How to tie a `ProviderModule` to a `Component`?](#how-to-tie-a-providermodule-to-a-component)
-    - [Is your component re-usable?](#is-your-component-re-usable)
-      - [Yes](#yes)
-      - [No](#no)
-  - [How to control a Child component providers from Parent component?](#how-to-control-a-child-component-providers-from-parent-component)
-    - [Override the entire Child Module](#override-the-entire-child-module)
-    - [Override only specific Child Providers](#override-only-specific-child-providers)
-  - [Hook Injection](#hook-injection)
-- [Examples](#examples)
-  - [Composable components](#composable-components)
-- [Unit Tests](#unit-tests)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [Credits](#credits)
+  - [Core Concepts](#core-concepts)
+    - [Component Modules](#component-modules)
+    - [Services](#services)
+    - [Dependency Injection](#dependency-injection)
+    - [Custom Hooks](#custom-hooks)
+  - [Examples](#examples)
+    - [Zustand Integration](#zustand-integration)
+    - [Parent-Child Provider Control](#parent-child-provider-control)
+  - [Advanced Usage](#advanced-usage)
+    - [Module Imports and Exports](#module-imports-and-exports)
+    - [Multiple Dependency Injection](#multiple-dependency-injection)
+  - [Unit Testing](#unit-testing)
+  - [Documentation](#documentation)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ## Overview
 
-This is the _official_ [ReactJS](https://react.dev/) implementation of the [xInjection](https://github.com/AdiMarianMutu/x-injection) library.
+xInjection for React brings dependency injection to your React components, enabling:
 
-> [!Warning]
->
-> The usage of the `base` library will not be explained here, I'll assume you already know how to use the `xInjection` library, if that's not the case, please refer to the `xInjection` [Gettng Started](https://github.com/AdiMarianMutu/x-injection?tab=readme-ov-file#getting-started) section.
+- **Service-based architecture**: Separate business logic from UI components
+- **Modular design**: Create reusable, testable component modules
+- **State management integration**: Works seamlessly with Zustand, Redux, or any state library
+- **Parent-child provider control**: Parent components can control child component dependencies
+
+This is the official [ReactJS](https://react.dev/) implementation of [xInjection](https://github.com/AdiMarianMutu/x-injection).
 
 ## Installation
 
-First, ensure you have [`reflect-metadata`](https://www.npmjs.com/package/reflect-metadata) installed:
-
 ```sh
-npm i reflect-metadata
+npm i @adimm/x-injection-reactjs reflect-metadata
 ```
 
-Then install `xInjection` for React:
+**TypeScript Configuration**
 
-```sh
-npm i @adimm/x-injection-reactjs
-```
-
-> [!Note]
->
-> You may also have to install the parent library via `npm i @adimm/x-injection`
-
-### TypeScript Configuration
-
-Add the following options to your `tsconfig.json` to enable decorator metadata:
+Add to your `tsconfig.json`:
 
 ```json
 {
@@ -77,17 +69,25 @@ Add the following options to your `tsconfig.json` to enable decorator metadata:
 }
 ```
 
-## Getting Started
-
-### Quick Start
+## Quick Start
 
 ```tsx
+import { Injectable, provideModuleToComponent, ProviderModule, useInject } from '@adimm/x-injection-reactjs';
+
+// 1. Define a service
+@Injectable()
+class UserService {
+  firstName = 'John';
+  lastName = 'Doe';
+}
+
+// 2. Create a module blueprint
 const UserDashboardModuleBp = ProviderModule.blueprint({
-  id: 'ComponentUserDashboardModule',
-  imports: [UserModule],
-  exports: [UserModule],
+  id: 'UserDashboardModule',
+  providers: [UserService],
 });
 
+// 3. Create a component with dependency injection
 const UserDashboard = provideModuleToComponent(UserDashboardModuleBp, () => {
   const userService = useInject(UserService);
 
@@ -97,505 +97,327 @@ const UserDashboard = provideModuleToComponent(UserDashboardModuleBp, () => {
     </h1>
   );
 });
-
-const App = () => {
-  return (
-    <>
-      <Navbar />
-      <UserDashboard />
-      <Footer />
-    </>
-  );
-};
 ```
 
-### Conventions
+## Core Concepts
 
-Before continuing you should read also the [Conventions](https://github.com/AdiMarianMutu/x-injection?tab=readme-ov-file#conventions) section of the _parent_ library.
+### Component Modules
 
-### Component Module
-
-You should create a separate file which you'll use to declare the `blueprint` of the _component_ `module`:
-
-`user-dashboard/user-dashboard.module.ts`
+Create a module blueprint that defines your component's dependencies:
 
 ```ts
+// user-dashboard.module.ts
 export const UserDashboardModuleBp = ProviderModule.blueprint({
-  id: 'ComponentUserDashboardModule',
-  ...
+  id: 'UserDashboardModule',
+  providers: [UserService],
+  exports: [UserService],
 });
 ```
 
-> [!Note]
->
-> You should also prefix the `id` of the `blueprints` with `Component` as this will help you to debug your app much more easier when something goes wrong.
+**Blueprint vs Module:** Use a **blueprint** for reusable components (multiple instances), use a raw **module** for singleton components (single instance).
 
-### Component Service
+### Services
 
-You should create a separate file which you'll use to declare the _(main)_ `service` of the _component_.
-
-`user-dashboard/user-dashboard.service.ts`
+Define services using the `@Injectable()` decorator:
 
 ```ts
+// user-dashboard.service.ts
 @Injectable()
 export class UserDashboardService {
   firstName: string;
   lastName: string;
+
+  getFullName() {
+    return `${this.firstName} ${this.lastName}`;
+  }
 }
 ```
 
-### How to tie a `ProviderModule` to a `Component`?
+### Dependency Injection
 
-You first have to either create a `module` or `blueprint`, most of the times you'll use the `blueprint` option, if you are asking yourself how you should decide:
-
-#### Is your component re-usable?
-
-> Will you have **more** than **one** instance of that component?
-
-##### Yes
-
-- Then you have to use a `blueprint`, the reason can be understood by reading [this](https://github.com/AdiMarianMutu/x-injection?tab=readme-ov-file#import-behavior).
-
-##### No
-
-- Then you have to use a raw `module`, the reason is the opposite of the `blueprint` motive.
-
-> [!Tip] If the above explaination is clear, please skip to the next section, otherwise keep reading.
-
-Imagine that we have a `Button` component, clearly we'll have more than one instance of that component, this means that **each** _instance_ of the `Button` component must have its own `module`, where all the `singletons` will act as singletons _only inside_ the component **instance**.
-
-> Therefore we leverage the `blueprint` _import_ behavior to achieve that naturally without additional overhead.
-
----
-
-After you created the `component module`, you can provide it to the actual component by using the [provideModuleToComponent](https://adimarianmutu.github.io/x-injection-reactjs/functions/provideModuleToComponent.html) _([HoC](https://legacy.reactjs.org/docs/higher-order-components.html))_ `method`.
+Use `useInject` to access services in your components:
 
 ```tsx
-const UserDashboard = provideModuleToComponent(UserDashboardModuleBp, (props: UserDashboardProps) => {
-  ...
+const UserDashboard = provideModuleToComponent(UserDashboardModuleBp, () => {
+  const userService = useInject(UserService);
+
+  return <div>{userService.getFullName()}</div>;
 });
 ```
 
-### How to control a Child component providers from Parent component?
+### Custom Hooks
 
-If you need this design pattern, it is very easy to implement with `xInjection`, you actually have 2 options:
-
-#### Override the entire Child Module
-
-Let's say that the `Child` component has this `module`:
+Create reusable hooks with dependency injection using `hookFactory`:
 
 ```ts
+const useUserFullName = hookFactory({
+  use: ({ firstName, lastName, deps: [userService] }) => {
+    userService.firstName = firstName;
+    userService.lastName = lastName;
+    return userService.getFullName();
+  },
+  inject: [UserService],
+});
+
+// Use in any component
+const fullName = useUserFullName({ firstName: 'John', lastName: 'Doe' });
+```
+
+## Examples
+
+### Zustand Integration
+
+This example shows how to integrate Zustand store within a service, allowing the service to manipulate the store while components only subscribe to state changes.
+
+```ts
+// counter.service.ts
+
+import { Injectable } from '@adimm/x-injection-reactjs';
+import { create } from 'zustand';
+
+interface CounterStore {
+  count: number;
+  increment: () => void;
+  decrement: () => void;
+  reset: () => void;
+}
+
+@Injectable()
+export class CounterService {
+  // Store instance encapsulated within the service
+  private readonly store = create<CounterStore>((set) => ({
+    count: 0,
+    increment: () => set((state) => ({ count: state.count + 1 })),
+    decrement: () => set((state) => ({ count: state.count - 1 })),
+    reset: () => set({ count: 0 }),
+  }));
+
+  // Expose store hook for components to subscribe
+  get useStore() {
+    return this.store;
+  }
+
+  // Getter to access current state from within the service
+  private get storeState() {
+    return this.store.getState();
+  }
+
+  // Business logic methods
+  increment() {
+    this.storeState.increment();
+  }
+
+  decrement() {
+    this.storeState.decrement();
+  }
+
+  reset() {
+    this.storeState.reset();
+  }
+
+  incrementBy(amount: number) {
+    // Complex logic lives in the service
+    const currentCount = this.storeState.count;
+    this.store.setState({ count: currentCount + amount });
+  }
+
+  async incrementAsync() {
+    // Handle async operations in the service
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    this.increment();
+  }
+}
+```
+
+```ts
+// counter.module.ts
+
+import { ProviderModule } from '@adimm/x-injection-reactjs';
+
+import { CounterService } from './counter.service';
+
+export const CounterModuleBp = ProviderModule.blueprint({
+  id: 'CounterModule',
+  providers: [CounterService],
+  exports: [CounterService],
+});
+```
+
+```tsx
+// counter.component.tsx
+
+import { provideModuleToComponent, useInject } from '@adimm/x-injection-reactjs';
+
+import { CounterModuleBp } from './counter.module';
+import { CounterService } from './counter.service';
+
+const Counter = provideModuleToComponent(CounterModuleBp, () => {
+  // Inject service for business logic
+  const counterService = useInject(CounterService);
+
+  // Subscribe to store for reactive state
+  const count = counterService.useStore((state) => state.count);
+
+  return (
+    <div>
+      <h2>Count: {count}</h2>
+      <button onClick={() => counterService.increment()}>+1</button>
+      <button onClick={() => counterService.decrement()}>-1</button>
+      <button onClick={() => counterService.incrementBy(5)}>+5</button>
+      <button onClick={() => counterService.incrementAsync()}>+1 Async</button>
+      <button onClick={() => counterService.reset()}>Reset</button>
+    </div>
+  );
+});
+
+export default Counter;
+```
+
+**Key Benefits:**
+
+- **Encapsulation**: Store is encapsulated within the service, not exposed globally
+- **Separation of concerns**: Business logic in services, UI only subscribes to state
+- **Testability**: Services are self-contained and easy to test
+- **Reusability**: Services with stores can be shared across components via dependency injection
+- **Type safety**: Full TypeScript support throughout
+
+### Parent-Child Provider Control
+
+Parent components can control child component dependencies using the `inject` prop:
+
+```ts
+// Child module and service
 const ChildModuleBp = ProviderModule.blueprint({
-  id: 'ComponentChildModule',
+  id: 'ChildModule',
   providers: [ChildService],
   exports: [ChildService],
 });
-```
 
-What you can now do is to provide the `ChildService` from the `Parent` component, like this:
-
-```ts
+// Parent module
 const ParentModuleBp = ProviderModule.blueprint({
-  id: 'ComponentParentModule',
+  id: 'ParentModule',
   providers: [ParentService, ChildService],
   exports: [ParentService, ChildService],
 });
-```
 
-Then, when you are rendering the `Child` component from **within** the `Parent` component:
-
-```ts
-const ParentComponent = provideModuleToComponent(ParentModuleBp, ({ module }) => {
-  // the `module` prop is always available and automatically injected into the `props` object.
-
-  return <ChildComponent module={module} />;
-});
-```
-
-Now the `ChildComponent` will be instantiated with the `module` received from the `ParentComponent`, therefore it'll use the `ChildService` managed into the `ParentModule`.
-
-> [!Tip]
->
-> This is perfect to use when you are writing _unit tests_ and you want to mock an entire component `module`
-
-#### Override only specific Child Providers
-
-> This is the approach which you should strive to use most of the times as it is less prone to _"human error"_ than overriding the entire module.
-
-Let's re-use the same example as the one from the above, the `ParentModule`:
-
-```ts
-const ParentModuleBp = ProviderModule.blueprint({
-  id: 'ComponentParentModule',
-  providers: [ParentService, ChildService],
-  exports: [ParentService, ChildService],
-});
-```
-
-And now the rendering part:
-
-```ts
+// Parent component controls child's service
 const ParentComponent = provideModuleToComponent(ParentModuleBp, () => {
-  // notice that we are not using the `module` prop anymore.
   const childService = useInject(ChildService);
 
+  // Override child's ChildService with parent's instance
   return <ChildComponent inject={[{ provide: ChildService, useValue: childService }]} />;
 });
 ```
 
-By using the `inject` prop _(which as the `module` prop is always available)_ you'll _"swap"_ the `ChildService` provider with a [ProviderValueToken](https://adimarianmutu.github.io/x-injection/types/ProviderValueToken.html) which provides the `ChildService` **instance** instantiated by the `ParentComponent`.
+This pattern is useful for:
 
-> [!Note]
->
-> If you are asking yourself `Why would I want to do that?`, that's a valid question, and most of the times you'll **not** need this feature, but sometimes, when you _compose_ components, being able to control the _providers_ of the children components becomes very useful. Check the [Composable Components](#composable-components) example to understand.
+- Building composable component hierarchies
+- Sharing state between parent and child components
+- Creating flexible component APIs
 
-### Hook Injection
+## Advanced Usage
 
-You already have seen in action the low-level [useInject](https://adimarianmutu.github.io/x-injection-reactjs/functions/useInject.html) hook _(take a look also at the [useInjectMany](https://adimarianmutu.github.io/x-injection-reactjs/functions/useInjectMany.html) hook)_. It is quite useful when you just have to inject quickly some dependencies into a component quite simple.
+### Module Imports and Exports
 
-But, as your UI will _grow_, you'll soon discover that you may inject _more_ dependencies into a component, or even in multiple components, therefore you'll end up writing a lot of duplicated code, well, as per the [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself#:~:text=%22Don't%20repeat%20yourself%22,redundancy%20in%20the%20first%20place.) principle, we want to _avoid_ that.
-
-This means that we can actually use the [hookFactory](https://adimarianmutu.github.io/x-injection-reactjs/functions/hookFactory.html) method to compose a _custom_ hook with access to any dependency available in the component module.
+Modules can import and re-export other modules:
 
 ```ts
-// The `HookWithDeps` generic type will help
-// in making sure that the `useGenerateUserFullName` hooks params are correctly visible.
-// The 1st generic param must be the hook params (Like `UserInfoProps`)
-// and the 2nd generic param must be an `array` with the providers type.
-const useGenerateUserFullName = hookFactory({
-  // The `use` property is where you write your hook implementation.
-  use: ({ firstName, lastName, deps: [userService] }: HookWithDeps<UserInfoProps, [UserService]>) => {
-    userService.firstName = firstName;
-    userService.lastName = lastName;
-
-    return userService.generateFullName();
-  },
-  // The `inject` array is very important,
-  // here we basically specify which dependencies should be injected into the custom hook.
-  // Also, keep in mind that the order of the `inject` array matters, the order of the `deps` prop
-  // is determined by the order of the `inject` array!
-  inject: [UserService],
-});
-```
-
-Now you can use it in inside any component which is using a `module` which can provide the `UserService`.
-
-```tsx
-export function UserInfo({ firstName, lastName }: UserInfoProps) {
-  const userFullName = useGenerateFullName({ firstName, lastName });
-
-  return <p>Hello {userFullName}!</p>;
-}
-```
-
-> **Note:** _If your custom hook does not accept any parameter, you can provide `void` to the 1st generic type._
->
-> e.g: `use: ({ deps: [userService] }: HookWithDeps<void, [UserService]>)`
-
-## Examples
-
-### Composable components
-
-In a real world scenario, you'll definitely have custom components which render other custom components and so on... _(like a [Matryoshka doll](https://en.wikipedia.org/wiki/Matryoshka_doll))_
-
-So you may find yourself wanting to be able to control a dependency/service of a child component from a parent component, with `xInjection` this is very easy to achieve thanks to the `ProviderModule` architecture, because each `module` can `import` and `export` other dependencies _(or modules)_ it fits in perfectly within the [declarative programming](https://en.wikipedia.org/wiki/Declarative_programming) world!
-
-In this example, we'll build 4 components, each with its own purpose. However, the `autocomplete` component will be the one capable of accessing the services of all of them.
-
-- An `inputbox`
-- A `list viewer`
-- A `dropdown`
-- An `autocomplete`
-
-<hr>
-
-> Inputbox
-
-`inputbox.service.ts`
-
-```ts
-@Injectable()
-export class InputboxService {
-  currentValue = '';
-
-  // We'll initialize this soon enough.
-  setStateValue!: (newValue: string) => void;
-
-  /** Can be used to update the {@link currentValue} of the `inputbox`. */
-  setValue(newValue: string): void {
-    this.currentValue = newValue;
-
-    this.setStateValue(this.currentValue);
-  }
-}
-
-export const InputboxModuleBp = ProviderModule.blueprint({
-  id: 'ComponentInputboxModule',
-  provides: [InputboxService],
-  exports: [InputboxService],
-});
-```
-
-`inputbox.tsx`
-
-```tsx
-export interface InputboxProps {
-  initialValue: string;
-}
-
-export const Inputbox = provideModuleToComponent<InputboxProps>(InputboxModuleBp, ({ initialValue }) => {
-  const service = useInject(InputboxService);
-  const [, setCurrentValue] = useState(initialValue);
-  service.setStateValue = setCurrentValue;
-
-  useEffect(() => {
-    service.currentValue = initialValue;
-  }, [initialValue]);
-
-  return <input value={service.currentValue} onChange={(e) => service.setValue(e.currentTarget.value)} />;
-});
-```
-
-<hr>
-
-> Listview
-
-`listview.service.ts`
-
-```ts
-@Injectable()
-export class ListviewService {
-  items = [];
-
-  /* Remaining fancy implementation */
-}
-
-export const ListviewModuleBp = ProviderModule.blueprint({
-  id: 'ComponentListviewModule',
-  provides: [ListviewService],
-  exports: [ListviewService],
-});
-```
-
-`listview.tsx`
-
-```tsx
-export interface ListviewProps {
-  items: any[];
-}
-
-export const Listview = provideModuleToComponent<ListviewProps>(ListviewModuleBp, ({ items }) => {
-  const service = useInject(ListviewService);
-
-  /* Remaining fancy implementation */
-
-  return (
-    <div>
-      {service.items.map((item) => (
-        <span key={item}>{item}</span>
-      ))}
-    </div>
-  );
-});
-```
-
-<hr>
-
-> Dropdown
-
-Now keep close attention to how we implement the `Dropdown` component, as it'll actually be the _parent_ controlling the `Listview` component own service.
-
-`dropdown.service.ts`
-
-```ts
-@Injectable()
-export class DropdownService {
-  constructor(readonly listviewService: ListviewService) {
-    // We can already take control of the children `ListviewService`!
-    this.listviewService.items = [1, 2, 3, 4, 5];
-  }
-
-  /* Remaining fancy implementation */
-}
-
-export const DropdownModuleBp = ProviderModule.blueprint({
-  id: 'ComponentDropdownModule',
-  // It is very important that we import all the exportable dependencies from the `ListviewModule`!
-  imports: [ListviewModuleBp],
-  provides: [DropdownService],
+const DropdownModuleBp = ProviderModule.blueprint({
+  id: 'DropdownModule',
+  imports: [ListviewModuleBp], // Import ListviewModule
+  providers: [DropdownService],
   exports: [
-    // Let's also re-export the dependencies of the `ListviewModule` so once we import the `DropdownModule`
-    // somewhere elese, we get access to the `ListviewModule` exported dependencies as well!
-    ListviewModuleBp,
-    // Let's not forget to also export our `DropdownService` :)
+    ListviewModuleBp, // Re-export imported module
     DropdownService,
   ],
 });
 ```
 
-`dropdown.tsx`
+### Multiple Dependency Injection
 
-```tsx
-export interface DropdownProps {
-  listviewProps: ListviewProps;
-
-  initialSelectedValue: number;
-}
-
-export const Dropdown = provideModuleToComponent<DropdownProps>(
-  ListviewModuleBp,
-  ({ listviewProps, initialSelectedValue }) => {
-    const service = useInject(DropdownService);
-
-    /* Remaining fancy implementation */
-
-    return (
-      <div className="fancy-dropdown">
-        <span>{initialSelectedValue}</span>
-
-        {/* Here we tell the `ListView` component to actually use the `ListviewService` instance we provide via the `useValue` property. */}
-        {/* Each `useInject(ListviewService)` used inside the `ListView` component will automatically resolve to `service.listviewService`. */}
-        <Listview {...listviewProps} inject={[{ provide: ListviewService, useValue: service.listviewService }]} />
-      </div>
-    );
-  }
-);
-```
-
-<hr>
-
-> Autocomplete
-
-And finally the grand finale!
-
-`autocomplete.service.ts`
+Use `useInjectMany` to inject multiple dependencies:
 
 ```ts
-@Injectable()
-export class AutocompleteService {
-  constructor(
-    readonly inputboxService: InputboxService,
-    readonly dropdownService: DropdownService
-  ) {
-    // Here we can override even what the `Dropdown` has already overriden!
-    this.dropdownService.listviewService.items = [29, 9, 1969];
-
-    // However doing the following, will throw an error because the `Inputbox` component
-    // at this time is not yet mounted, therefore the `setStateValue` state setter
-    // method doesn't exist yet.
-    //
-    // A better way would be to use a store manager so you can generate your application state through
-    // the services, rather than inside the UI (components should be used only to render the data, not to manipulate/manage it).
-    this.inputboxService.setValue('xInjection');
-  }
-
-  /* Remaining fancy implementation */
-}
-
-export const AutocompleteModuleBp = ProviderModule.blueprint({
-  id: 'ComponentAutocompleteModule',
-  imports: [InputboxModuleBp, DropdownModuleBp],
-  provides: [AutocompleteService],
-  // If we don't plan to share the internal dependencies of the
-  // Autocomplete component, then we can omit the `exports` array declaration.
-});
+const [userService, apiService] = useInjectMany([UserService, ApiService]);
 ```
 
-`autocomplete.tsx`
+## Unit Testing
+
+Mock modules easily for testing:
 
 ```tsx
-export interface AutocompleteProps {
-  inputboxProps: InputboxProps;
-  dropdownProps: DropdownProps;
+import { act, render } from '@testing-library/react';
 
-  currentText: string;
-}
-
-export const Autocomplete = provideModuleToComponent<AutocompleteProps>(AutocompleteModuleBp, ({ inputboxProps, dropdownProps, currentText }) => {
-    const service = useInject(AutocompleteService);
-
-    service.inputboxService.currentValue = currentText;
-
-    console.log(service.dropdownService.listviewService.items);
-    // Produces: [29, 9, 1969]
-
-    /* Remaining fancy implementation */
-
-    return (
-      <div className="fancy-autocomplete">
-        {/* Let's not forget to replace the injection providers of both components we want to control */}
-        <Inputbox {...inputboxProps} inject={[{ provide: InputboxService, useValue: service.inputboxService }]} >
-        <Dropdown {...dropdownProps} inject={[{ provide: DropdownService, useValue: service.dropdownService }]} />
-      </div>
-    );
-  }
-);
-```
-
-This should cover the fundamentals of how you can build a scalable UI by using the `xInjection` Dependency Injection 😊
-
-## Unit Tests
-
-It is very easy to create mock modules so you can provide them to your components in your unit tests.
-
-```tsx
-class ApiService {
-  constructor(private readonly userService: UserService) {}
-
-  async sendRequest<T>(location: LocationParams): Promise<T> {
-    // Pseudo Implementation
-    return this.sendToLocation(user, location);
-  }
-
-  private async sendToLocation(user: User, location: any): Promise<any> {}
-}
-
-const ApiModuleBp = new ProviderModule.blueprint({
+// Original module
+const ApiModuleBp = ProviderModule.blueprint({
   id: 'ApiModule',
   providers: [UserService, ApiService],
 });
 
-// Clone returns a `deep` clone and wraps all the `methods` to break their reference!
+// Create mocked version
 const ApiModuleBpMocked = ApiModuleBp.clone().updateDefinition({
   id: 'ApiModuleMocked',
   providers: [
-    {
-      provide: UserService,
-      useClass: UserService_Mock,
-    },
+    { provide: UserService, useClass: UserServiceMock },
     {
       provide: ApiService,
       useValue: {
-        sendRequest: async (location) => {
-          console.log(location);
-        },
+        sendRequest: vi.fn().mockResolvedValue({ data: 'mocked' }),
       },
     },
   ],
 });
 
-// Now all the dependencies used inside the "RealComponent" will be automatically resolved from the `ApiModuleBpMocked` module.
-await act(async () => render(<RealComponent module={ApiModuleBpMocked} />));
+// Test with mocked module
+await act(async () => render(<MyComponent module={ApiModuleBpMocked} />));
+```
+
+**Testing with Zustand:**
+
+```tsx
+import { act, renderHook } from '@testing-library/react';
+
+import { CounterService } from './counter.service';
+
+it('should increment counter via service', () => {
+  const service = new CounterService();
+
+  const { result } = renderHook(() => service.useStore((s) => s.count));
+
+  expect(result.current).toBe(0);
+
+  act(() => {
+    service.increment();
+  });
+
+  expect(result.current).toBe(1);
+});
+
+it('should handle complex business logic', () => {
+  const service = new CounterService();
+
+  act(() => {
+    service.incrementBy(10);
+  });
+
+  expect(service.useStore.getState().count).toBe(10);
+});
 ```
 
 ## Documentation
 
-Comprehensive, auto-generated documentation is available at:
+📚 **Full API Documentation:** [https://adimarianmutu.github.io/x-injection-reactjs](https://adimarianmutu.github.io/x-injection-reactjs/index.html)
 
-👉 [https://adimarianmutu.github.io/x-injection-reactjs/index.html](https://adimarianmutu.github.io/x-injection-reactjs/index.html)
+For more information about the base library, see [xInjection Documentation](https://github.com/AdiMarianMutu/x-injection#readme).
 
 ## Contributing
 
-Pull requests are warmly welcomed! 😃
+Pull requests are welcome! Please ensure your contributions follow the project's code style.
 
-Please ensure your contributions adhere to the project's code style. See the repository for more details.
+## License
 
-## Credits
-
-- [Adi-Marian Mutu](https://www.linkedin.com/in/mutu-adi-marian/) - Author of `xInjection` & `xInjection ReactJS`
+MIT © [Adi-Marian Mutu](https://www.linkedin.com/in/mutu-adi-marian/)
 
 ---
 
-> [!NOTE]
->
-> **For questions, feature requests, or bug reports, feel free to open an [issue](https://github.com/AdiMarianMutu/x-injection-react/issues) on GitHub.**
+**Questions or issues?** Open an [issue on GitHub](https://github.com/AdiMarianMutu/x-injection-reactjs/issues)
