@@ -12,32 +12,32 @@
 <a href="https://www.npmjs.com/package/@adimm/x-injection-reactjs" target="__blank"><img src="https://badgen.net/npm/dm/@adimm/x-injection-reactjs"></a>
 </p>
 
-# xInjection for React
-
-Powerful dependency injection for React components using a modular architecture. Build scalable React applications with clean separation of concerns.
+**Powerful dependency injection for React components using a modular architecture. Build scalable React applications with clean separation of concerns.** _(Inspired by Angular and NestJS IoC/DI)_
 
 ## Table of Contents
 
-- [xInjection for React](#xinjection-for-react)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Installation](#installation)
-  - [Quick Start](#quick-start)
-  - [Core Concepts](#core-concepts)
-    - [Component Modules](#component-modules)
-    - [Services](#services)
-    - [Dependency Injection](#dependency-injection)
-    - [Custom Hooks](#custom-hooks)
-  - [Examples](#examples)
-    - [Zustand Integration](#zustand-integration)
-    - [Parent-Child Provider Control](#parent-child-provider-control)
-  - [Advanced Usage](#advanced-usage)
-    - [Module Imports and Exports](#module-imports-and-exports)
-    - [Multiple Dependency Injection](#multiple-dependency-injection)
-  - [Unit Testing](#unit-testing)
-  - [Documentation](#documentation)
-  - [Contributing](#contributing)
-  - [License](#license)
+- [Table of Contents](#table-of-contents)
+- [Overview](#overview)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [The Problem](#the-problem)
+  - [Without xInjection](#without-xinjection)
+  - [With xInjection](#with-xinjection)
+- [Core Concepts](#core-concepts)
+  - [Component Modules](#component-modules)
+  - [Services](#services)
+  - [Dependency Injection](#dependency-injection)
+  - [Custom Hooks](#custom-hooks)
+- [Examples](#examples)
+  - [Zustand Integration](#zustand-integration)
+  - [Parent-Child Provider Control](#parent-child-provider-control)
+- [Advanced Usage](#advanced-usage)
+  - [Module Imports and Exports](#module-imports-and-exports)
+  - [Multiple Dependency Injection](#multiple-dependency-injection)
+- [Unit Testing](#unit-testing)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Overview
 
@@ -98,6 +98,67 @@ const UserDashboard = provideModuleToComponent(UserDashboardModuleBp, () => {
   );
 });
 ```
+
+## The Problem
+
+React apps often suffer from **provider hell**, **prop drilling**, and **manual dependency wiring**:
+
+### Without xInjection
+
+```tsx
+// Problem 1: Provider Hell
+<AuthProvider>
+  <ApiProvider>
+    <ToastProvider>
+      <App />
+    </ToastProvider>
+  </ApiProvider>
+</AuthProvider>;
+
+// Problem 2: Manual Dependency Wiring
+function UserProfile() {
+  // Must manually create ALL dependencies in correct order
+  const toast = new ToastService();
+  const api = new ApiService();
+  const auth = new AuthService(api);
+  const userProfile = new UserProfileService(api, auth, toast);
+
+  // If AuthService adds a dependency, ALL consumers break!
+  return <div>{userProfile.displayName}</div>;
+}
+```
+
+### With xInjection
+
+```tsx
+// 1. Define global services (shared across all components) - Usually in your app entrypoint/bootstrap file.
+const AppModuleBp = ProviderModule.blueprint({
+  id: 'AppModule',
+  isGlobal: true, // Available everywhere, only created once
+  providers: [ToastService, ApiService, AuthService],
+});
+
+// 2. Define component-specific services - Per component
+const UserProfileModuleBp = ProviderModule.blueprint({
+  id: 'UserProfileModule',
+  providers: [UserProfileService], // Automatically gets ApiService, AuthService, ToastService
+});
+
+const UserProfile = provideModuleToComponent(UserProfileModuleBp, () => {
+  const userProfile = useInject(UserProfileService);
+  // IoC automatically injects: ToastService → ApiService → AuthService → UserProfileService
+  return <div>{userProfile.displayName}</div>;
+});
+```
+
+**What You Get:**
+
+- **No Provider Hell** - One module replaces nested providers
+- **Auto Dependency Resolution** - IoC wires everything automatically
+- **Easy Refactoring** - Add/remove dependencies without breaking consumers
+- **Clean Separation** - Business logic in services, UI in components
+- **Fully Testable** - Mock modules or individual services
+- **Type-Safe** - Full TypeScript support
 
 ## Core Concepts
 
