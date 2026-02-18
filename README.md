@@ -431,28 +431,10 @@ const TodoListModuleBp = ProviderModule.blueprint({
 
 **`blueprint()` vs `create()`:**
 
-- **`blueprint()`**: Creates a **deferred module** (template) instantiated when needed. Use for all React modules—both global and component-scoped. [Learn more](https://github.com/AdiMarianMutu/x-injection?tab=readme-ov-file#blueprints).
-- **`create()`**: Immediately initializes a module. Rarely needed in React.
+- **`blueprint()`**: A deferred module template. Each time it is imported or used with `provideModuleToComponent`, a **new independent instance** is created. Use for the global bootstrap module and for component-scoped modules. [Learn more](https://github.com/AdiMarianMutu/x-injection?tab=readme-ov-file#blueprints).
+- **`create()`**: Immediately instantiates a module. The resulting instance is a **single shared object** — every module that imports it shares the exact same instance. Use when you need a module that is instantiated once and shared across multiple other modules.
 
-**Modules can import other modules to compose functionality:**
-
-```tsx
-// Shared utilities module
-const UtilsModuleBp = ProviderModule.blueprint({
-  id: 'UtilsModule',
-  providers: [LoggerService, DateService],
-  exports: [LoggerService, DateService],
-});
-
-// Feature module imports utilities
-const UserDashboardModuleBp = ProviderModule.blueprint({
-  id: 'UserDashboardModule',
-  imports: [UtilsModuleBp], // Reuse LoggerService and DateService
-  providers: [UserProfileService], // Add UserProfileService
-});
-```
-
-See [Module Imports and Exports](#module-imports-and-exports) for more advanced patterns.
+See [Module Imports and Exports](#module-imports-and-exports) for examples of both.
 
 [!CAUTION]
 
@@ -790,47 +772,52 @@ The `inject` prop allows parent components to override child component dependenc
 
 ### Module Imports and Exports
 
-Modules can import other modules to reuse their services:
+Modules can import other modules. The key question is: **should the imported module be shared or duplicated per component?**
+
+**Shared module instance → `ProviderModule.create()`:**
+
+Use `create()` when a module should exist as one instance and be shared by all blueprints that import it:
 
 ```tsx
-// Base module with shared services
-const CoreModuleBp = ProviderModule.blueprint({
+// Instantiated once — all importers share the same instance and the same singletons
+const CoreModule = ProviderModule.create({
   id: 'CoreModule',
-  providers: [ApiService, LoggerService],
-  exports: [ApiService, LoggerService], // Make these available to importers
+  providers: [SomeSharedService],
+  exports: [SomeSharedService],
 });
 
-// Feature module imports CoreModule
 const UserModuleBp = ProviderModule.blueprint({
   id: 'UserModule',
-  imports: [CoreModuleBp], // Get ApiService and LoggerService
-  providers: [UserService], // Add UserService (can use ApiService and LoggerService)
+  imports: [CoreModule], // every <UserComponent /> shares the same CoreModule
+  providers: [UserService],
 });
 
-// Another feature module
 const ProductModuleBp = ProviderModule.blueprint({
   id: 'ProductModule',
-  imports: [CoreModuleBp], // Also gets ApiService and LoggerService
+  imports: [CoreModule], // same CoreModule instance
   providers: [ProductService],
 });
 ```
 
-**Re-exporting modules:**
+**Per-component isolation → blueprint imports:**
+
+Import a blueprint when each component instance should get its own independent copy of those providers:
 
 ```tsx
-const SharedModuleBp = ProviderModule.blueprint({
-  id: 'SharedModule',
-  imports: [CoreModuleBp, UtilsModuleBp],
-  exports: [
-    CoreModuleBp, // Re-export CoreModule
-    UtilsModuleBp, // Re-export UtilsModule
-  ],
+const UserModuleBp = ProviderModule.blueprint({
+  id: 'UserModule',
+  imports: [FormValidationModuleBp], // each <UserComponent /> gets its own FormValidationService
+  providers: [UserService],
 });
+```
 
-// Other modules can import SharedModule to get everything
-const FeatureModuleBp = ProviderModule.blueprint({
-  id: 'FeatureModule',
-  imports: [SharedModuleBp], // Gets CoreModule + UtilsModule
+**Re-exporting:**
+
+```tsx
+const CoreModule = ProviderModule.create({
+  id: 'CoreModule',
+  imports: [DatabaseModule, CacheModule],
+  exports: [DatabaseModule, CacheModule], // expose both to importers
 });
 ```
 
@@ -1250,28 +1237,28 @@ const MyModuleBp = ProviderModule.blueprint({
 });
 ```
 
-**When to use:** Components that can have multiple instances (forms, lists, dialogs, etc.).
+**When to use:** The global bootstrap module (`isGlobal: true`) and component-scoped modules (forms, lists, dialogs, etc.).
 
 #### `ProviderModule.create(definition)`
 
-Creates and immediately initializes a module instance. In React apps, **you rarely need this**—use `blueprint()` instead.
+Creates and immediately initializes a module instance.
 
 ```tsx
-const MyModule = ProviderModule.create({
-  id: 'MyModule',
-  providers: [MyService],
+const CoreModule = ProviderModule.create({
+  id: 'CoreModule',
+  providers: [SomeSharedService],
+  exports: [SomeSharedService],
 });
 
-// Access the module directly and use it as a service locator.
-const service = MyModule.get(MyService);
+// Import the single instance into any blueprint
+const UserModuleBp = ProviderModule.blueprint({
+  id: 'UserModule',
+  imports: [CoreModule], // shared — not duplicated per component
+  providers: [UserService],
+});
 ```
 
-**When to use:** Direct module access outside of components, testing, or advanced scenarios. For normal React apps, use `blueprint()` for both global and component-scoped modules.
-
-**Key difference:**
-
-- `blueprint()`: Template - can create many instances. Use for **all** React modules (global and component-scoped).
-- `create()`: Immediate instance - for direct access outside React components.
+**When to use:** When a module should be instantiated **once** and shared across multiple importing modules. Every blueprint that imports a `create()`-d module shares the same instance and the same set of singletons.
 
 ## FAQ
 
