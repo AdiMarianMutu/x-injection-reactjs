@@ -179,8 +179,7 @@ This is the official [ReactJS](https://react.dev/) implementation of [xInjection
 npm i @adimm/x-injection-reactjs reflect-metadata
 ```
 
-[!IMPORTANT]
-
+> [!IMPORTANT]
 > Import `reflect-metadata` at the very top of your app entry point:
 
 ```tsx
@@ -310,8 +309,7 @@ export default function App() {
 }
 ```
 
-[!TIP]
-
+> [!TIP]
 > **Key points:**
 >
 > - Global services (`ApiService`, `AuthService`): Defined in a global blueprint, automatically imported into the built-in `AppModule`
@@ -421,12 +419,10 @@ const TodoListModuleBp = ProviderModule.blueprint({
 });
 ```
 
-[!IMPORTANT]
-
+> [!IMPORTANT]
 > When using `isGlobal: true`, only services listed in the `exports` array become globally available. Non-exported providers remain private to the module.
 
-[!CAUTION]
-
+> [!CAUTION]
 > **Global modules cannot be used with `provideModuleToComponent`**. Attempting to provide a global module to a component will throw an `InjectionProviderModuleError`. Global services are accessed directly via `useInject` without the HoC.
 
 **`blueprint()` vs `create()`:**
@@ -436,8 +432,7 @@ const TodoListModuleBp = ProviderModule.blueprint({
 
 See [Module Imports and Exports](#module-imports-and-exports) for examples of both.
 
-[!CAUTION]
-
+> [!CAUTION]
 > **Never import `AppModule`** into other modules. `AppModule` is the built-in global container and importing it will throw an error. Use global blueprints with `isGlobal: true` instead, which are automatically imported into `AppModule`.
 
 ### 3. Injecting Services into Components
@@ -741,8 +736,7 @@ useUserData({ userId: 123 }); // With parameters
 - **`P`**: Hook parameter type (use `void` if no parameters, or `{ param1: type, ... }` for parameters)
 - **`D`**: Tuple type matching your `inject` array (e.g., `[ApiService, AuthService]`)
 
-[!TIP]
-
+> [!TIP]
 > **Why use hookFactory?**
 >
 > - Dependencies are automatically injected
@@ -1138,8 +1132,7 @@ const MyComponent = provideModuleToComponent(MyModuleBp, (props) => {
 });
 ```
 
-[!CAUTION]
-
+> [!CAUTION]
 > The module must NOT have `isGlobal: true`. Global modules are accessed directly via `useInject` without the HoC. Providing a global module will throw an `InjectionProviderModuleError`.
 
 #### `useInject(ServiceClass, options?)`
@@ -1304,8 +1297,7 @@ import { AppModule } from '@adimm/x-injection';
 AppModule.update.addProvider(ApiService, true); // true = also export
 ```
 
-[!WARNING]
-
+> [!WARNING]
 > The library provides a built-in `AppModule`. Don't create your own module named "AppModule"—use one of the methods above instead.
 
 ### When should I use global modules vs component-scoped modules?
