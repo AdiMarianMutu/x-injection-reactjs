@@ -381,14 +381,18 @@ describe.each([
 
       const InputboxModuleBp = ProviderModule.blueprint({
         id: 'InputboxModuleBp',
-        defaultScope: InjectionScope.Transient,
         providers: [InputboxService],
         exports: [InputboxService],
       });
 
       const FormModuleBp = ProviderModule.blueprint({
         id: 'FormModuleBp',
-        imports: [InputboxModuleBp],
+        imports: [
+          InputboxModuleBp.clone().updateDefinition({
+            ...InputboxModuleBp.getDefinition(),
+            defaultScope: InjectionScope.Transient,
+          }),
+        ],
         providers: [FormService],
       });
 
